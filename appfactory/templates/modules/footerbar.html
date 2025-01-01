@@ -1,0 +1,67 @@
+<style>
+    .footerbar {
+        display: flex;
+        
+        justify-content:space-between;
+        align-items: center;
+        gap: 5px;
+
+        position: fixed;
+        margin-left: 2vw;
+
+        width: 500px;
+        bottom: 0vh;
+        padding: 20px;
+        /* background-color: rgba(0, 0, 0, 0.5); */
+        border-radius: 5px;
+        max-height: 100px;
+        z-index: 999;
+    }
+
+    .footerbar button {
+        position: absolute;
+        width: 100px;
+        height: 40px;
+        bottom: 20px;
+    }
+
+    #reset {
+        margin-top: 0;
+        
+    }
+
+    #mode {
+        margin-left: 120px;
+        width: 200px;
+    }
+
+    #close-detail {
+        transform: translateX(calc(100vw - 250px));
+        font-size: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .footerbar {
+            margin: 0;
+            top: 90vh;
+            padding: 0px;
+            width: 95vw;
+            background: none;
+        }
+    }
+</style>
+
+<div class="footerbar">
+    <button class="btn btn-primary" id="reset" onclick="window.location.href='/content'" style = 'display:{{ reset_visible }}'><i class="fas fa-power-off"></i></button>
+    <select id="mode" onchange="_showVolumeMode()"  style = 'display:{{ viewmode_visible }}'>
+        <option value="Số lượng">SỐ LƯỢNG</option>
+        <option value="Volume">VOLUME</option>
+    </select>
+    <button id="close-detail" class="btn btn-primary"><i class="fas fa-times"></i></button>
+</div>
+
+<script>
+    document.getElementById('close-detail').addEventListener("click", () => {
+        document.getElementById('detail-obj').classList.remove('active');
+    });
+</script>

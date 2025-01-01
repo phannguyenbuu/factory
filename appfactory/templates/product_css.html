@@ -1,0 +1,576 @@
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%; /* Đảm bảo chiếm toàn bộ chiều cao màn hình */
+            overflow: hidden; /* Ngăn trang cuộn nếu không cần thiết */
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Căn giữa nội dung dọc */
+            align-items: center; /* Căn giữa nội dung ngang */
+        }
+
+        th.sortable:hover {
+            cursor: pointer;
+            background-color: #f1f1f1;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: #f1f1f1;
+            color: #333;
+            z-index: 1; /* Đảm bảo tiêu đề nằm trên các hàng dữ liệu */
+            padding: 8px;
+            font-weight: normal;
+            height: 40px;
+        }
+
+        .custom-tooltip {
+            position: absolute;
+            background-color: black;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            visibility: hidden;
+            z-index: 1000;
+            transition: visibility 0.2s, opacity 0.2s;
+            opacity: 0;
+        }
+
+        th:hover .custom-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        th::before {
+            content: ""; /* Tạo một lớp phủ */
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(200, 200, 200); /* Màu nền mờ */
+            z-index: -1; /* Đưa lớp nền phụ xuống dưới nội dung */
+            border-bottom: 1px solid #ddd; /* Đường viền dưới cho hiệu ứng */
+            pointer-events: none; /* Đảm bảo lớp nền phụ không ảnh hưởng đến sự kiện chuột */
+        }
+
+        #productTable {
+            table-layout: fixed; /* Đảm bảo các cột có độ rộng cố định */
+            min-height: 100vh;
+            left: 0px;
+            margin-left: 0px;
+        }
+
+
+        tr {
+            
+            height: 40px;
+            /* overflow: hidden; */
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .myComboBox {
+            width: 10vw;
+            height: 50px;
+        }
+
+        .choices {
+            width: 15vw;
+            border: 1px solid #000;
+            color: black;
+        }
+
+        .choices option {
+            color: black;
+        }
+
+        .topbar p {
+            min-width: 15vw;
+            font-size: 30px !important;
+        }
+
+        /* Căn chỉnh sidebar bên trái */
+        .container {
+            margin-left: 0vw;
+            display: grid;
+            grid-template-columns: 1fr 6fr 1fr; /* Cột 1 và cột 3 chiếm 1 phần, cột 2 chiếm 6 phần */
+            gap: 20px; /* Khoảng cách giữa các bảng */
+        }
+
+        .sidebar, .detailbar {
+            table-layout: fixed;
+            position: fixed;
+            min-width: 15vw; /* Tăng chiều rộng sidebar */
+            
+            background-color: #f4f4f4;
+            overflow-y: auto;
+            
+            
+            z-index: 999;
+            padding-right: 50px;
+            padding-left: 20px;
+        }
+
+        .detailbar {
+            right: 10vw;
+            top: 5vh;
+            z-index: 998;
+            max-height: 99vh;
+        }
+        
+
+
+        thead th {
+            
+            position: sticky;
+            top: 0;
+            background-color: #ffffff; /* Nền trắng cho hàng cố định */
+            z-index: 3; /* Đảm bảo hàng cố định nằm trên các hàng khác */
+        }
+
+        /* Điều chỉnh khoảng cách cho bảng bên phải của sidebar */
+        .tablebar {
+            position: absolute;
+            margin-left: 0vw;
+            width: 99vw;
+            top:0px;
+            left:0px;
+            max-height: 92vh; /* Chiều cao cố định cho container */
+            overflow-y: auto; /* Bật scrollbar dọc */
+            border: 1px solid #ccc; /* Đường viền cho container */
+        }
+
+        /* Tạo chiều cao tối đa cho mỗi listbox là 1/5 màn hình */
+        .filter-group {
+            margin-bottom: 20px;
+            max-height: 22vh; /* 1/5 chiều cao màn hình */
+            overflow-y: auto;
+            padding-right: 0px; /* Khoảng cách cho thanh cuộn */
+            padding: 10px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            /* max-width: 10vw; */
+        }
+
+        th, td {
+            cursor: pointer; /* Thêm hiệu ứng con trỏ khi di chuột */
+        }
+
+        .list-item {
+            display: flex;
+            gap: 0px;
+            overflow: hidden;
+            padding: 0px;
+            
+        }
+
+        .list-item-container::before {
+            content: ""; /* Tạo một lớp phủ */
+            position: absolute;
+            top:0px;
+            left:0px;
+            right:0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5); /* Màu nền mờ */
+            height: 60px;
+            z-index: 999; /* Đưa lớp nền phụ xuống dưới nội dung */
+            border-bottom: 1px solid #000; /* Đường viền dưới cho hiệu ứng */
+            pointer-events: none; /* Đảm bảo lớp nền phụ không ảnh hưởng đến sự kiện chuột */
+        }
+
+        .list-item-container {
+            position: relative; /* Đặt phần tử cha là vị trí tham chiếu */
+            background-color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 0px;
+            margin-top: 10px;
+        }
+
+        .list-item-container label{
+            padding-left: 25px;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            scale:1;
+        }
+
+        .list-item label {
+            padding: 0px;
+            padding-left: 10px;
+            
+        }
+
+        select {
+            background-color: #0d6efd;color:white;
+            border-radius: 5px;
+        }
+
+        select option {
+            width: 200px;
+            text-align: center;
+        }
+
+
+        #first-filter-group {
+            position:fixed;
+            /* min-width: 15vw; */
+            display:flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 20px;
+            padding-bottom: 10px;
+            bottom: 0;
+            z-index: 999;
+            max-height:24vh;
+            margin-top: 50px;
+        }
+
+        #first-filter-group * {
+            height: 40px;
+        }
+
+        
+        #filter-group-process,  #filter-group-day {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Tạo 2 cột có độ rộng bằng nhau */
+            gap: 10px; /* Khoảng cách giữa các ô */
+            
+            background-color: none !important;
+        }
+
+        #filter-group-process {
+            overflow-y: hidden;
+        }
+
+
+        .checkbox-input-process, .checkbox-input-day {
+            opacity: 0;
+        }
+
+        .checkbox-label-process,  .checkbox-label-day {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid transparent; /* Không có viền mặc định */
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            width: 100px;
+        }
+
+        /* Khi checkbox được chọn, thêm viền cho label */
+        .checkbox-input-process:checked + .checkbox-label-process, .checkbox-input-day:checked + .checkbox-label-day {
+            border-color: #007bff; /* Viền màu xanh hoặc màu bạn chọn */
+        }
+
+
+        .checkbox-label-name {
+            cursor: pointer; /* Hiển thị con trỏ dạng bàn tay khi hover */
+        }
+
+        /* Hiệu ứng khi di chuột qua */
+        .checkbox-label-name:hover {
+            background-color: rgba(0,0,0,0.5); /* Màu nền nhạt hơn khi hover */
+            border-radius: 4px; /* Bo tròn góc */
+            transition: background-color 0.3s ease; /* Thêm hiệu ứng chuyển màu mượt mà */
+        }
+
+
+        .custom-tooltip {
+            background-color: #333;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+
+        .group-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #filter {
+            min-width: 150px;
+            margin-top: 20px;
+        }
+
+        .group-btn * {
+            flex: 1;
+            align-self: center;
+        }
+
+        .po-note {
+            font-size: 12px;
+            font-style: italic;
+            pointer-events: none;
+            
+            padding-left: 20px;
+            position: relative; /* Đảm bảo ::before định vị dựa vào po-note */
+            width: 100%;
+            height: 20px;
+        }
+        
+        .highlight {
+            border-left: 10px solid #0d6efd; /* Đặt màu xanh cho border-left */
+            transform: translateX(20px);
+        }
+
+        #filter-group-Name {
+            margin-bottom: 20vh;
+        }
+
+        #detail-obj{
+            left: 0px;
+            margin-left:70vw;
+            width: 30vw;
+            position: relative;
+            max-height: 95vh; /* Chiều cao cố định cho container */
+            overflow-y: auto; /* Bật scrollbar dọc */
+            border: 1px solid #ccc; /* Đường viền cho container */
+            background-color: #fff;
+        }
+
+        #detail-obj h3 {
+            white-space: nowrap;
+            margin-left: 70px;
+        }
+
+        #detail-obj p {
+            white-space: nowrap;
+            margin-left: 70px;
+        }
+
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            top: 0px;
+        }
+        
+        .detail-table th:nth-child(1), .detail-table td:nth-child(1) {
+            width: 50px;
+            text-align: center;
+        }
+
+        .detail-table th:nth-child(2), .detail-table td:nth-child(2) {
+            width: 200px;
+        }
+
+        .detail-table th:nth-child(3), .detail-table td:nth-child(3) {
+            width: 100px;
+        }
+
+        .detail-table td:nth-child(3) {
+            font-size: 0.8rem;
+        }
+
+        .detail-table th:nth-child(4), .detail-table td:nth-child(4), .detail-table th:nth-child(5), .detail-table td:nth-child(5) {
+            width: 80px;
+            text-align: center;
+        }
+
+        .detail-table th:nth-child(n+6), .detail-table td:nth-child(n+6) {
+            width: 150px;
+        }
+
+        .round-border {
+            width: 100%;
+            font-size: 10px;
+            border: 1px solid #ccc; /* Viền */
+            border-radius: 10px; /* Bo tròn */
+            padding: 10px; /* Khoảng cách nội dung */
+            display: inline-block; /* Đảm bảo viền chỉ bao quanh nội dung */
+            background-color: #f9f9f9; /* Màu nền nhạt */
+        }
+
+        .suggestions {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none; /* Ẩn khi không có gợi ý */
+        }
+
+        .suggestions li {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .suggestions li:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Nút điều khiển */
+        .toggle-button {
+            z-index: 1000;
+            background-color: #007bff;
+            /* opacity: 0.5; */
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 0px 0px 10px 0px;
+            width: 50px;
+            height: 40px;
+            position: fixed;
+            top: 0px;
+            left: 0px;
+        }
+
+        .container {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar, .detailbar
+            {
+            margin-left: 0;
+            transition: transform 0.3s ease-in-out;
+        }
+        
+
+        .sidebar {
+            display: grid; /* Sử dụng grid để chia thành 2 cột */
+            grid-template-columns: 1fr 1fr; /* Mỗi cột chiếm 1 phần đều */
+            gap: 2px; /* Khoảng cách giữa các cột */
+            min-width: 30vw; /* Xóa min-width để tự động điều chỉnh chiều rộng */
+            padding: 50px; /* Điều chỉnh padding nếu cần */
+            padding-bottom: 50px;
+            min-height: 98.5vh;
+
+            top: -50px;
+            transform: translateX(-500%); /* Ẩn mặc định */
+        }
+
+        .detailbar {
+            height: 85vh;
+            min-width: 55vw;
+            top: -20px;
+            transform: translateX(500%); /* Ẩn mặc định */
+        }
+
+        .sidebar.active {
+            transform: translateX(0px); /* Hiện sidebar */
+            padding-left: 0px;
+            padding-right: 0px;
+        }
+
+        .detailbar.active {
+            transform: translateX(-30vw);
+        }
+
+        #first-filter-group {
+            position: relative;
+        }
+
+        #filter {
+            margin-left: 2vw;
+            transform: translateY(-100px);
+            width: 100px;
+            min-height: 40px;
+        }
+
+        .list-item-container {
+            font-size: 12px;
+            white-space: nowrap;
+            padding-left: 0px;
+            margin: 0px;
+            min-height: 20vh;
+            max-width: 14vw;
+        }
+
+        .list-item-container::before {
+            height: 45px;
+        }
+
+        .list-item-container .list-item {
+            /* max-width: 5vw; */
+            transform: translateX(0px) translateY(-10px);
+        }
+
+        @media (max-width: 768px) {
+            table{
+                width: 100%;
+            }
+
+            .tablebar{
+                max-height:80vh;
+            }
+            .sidebar {
+                max-height: 100vh;
+                overflow-y:auto;
+                gap:0px;
+            }
+            .list-item-container {
+                max-width: 48vw;
+                scale: 0.9;
+            }
+            .list-item-container .list-item {
+                transform: translateX(0px) translateY(-10px);
+            }
+            .list-item-container .list-item input {
+                transform: translateY(-10px);
+            }
+            .sidebar {
+                min-width: 40vw; /* Xóa min-width để tự động điều chỉnh chiều rộng */
+            }
+            .detailbar.active {
+                /* left: 0px; */
+                transform: translateX(-70vw);
+                min-width:98vw;
+                top: 0px;
+            }
+            
+
+            th:nth-child(1), td:nth-child(1) {
+                max-width: 50px;
+            }
+
+            th:nth-child(n+6), td:nth-child(n+6) {
+                min-width: 50px; /* Đặt độ rộng cho cột đầu tiên */
+            }
+            td:nth-child(n+6) {
+                font-size:0.8rem;
+            }
+
+            th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) {
+                max-width: 100px; /* Đặt độ rộng cho cột thứ hai */
+                text-align: left;
+            } 
+            
+            th:nth-child(4), td:nth-child(4),th:nth-child(5), td:nth-child(5) {
+                min-width: 100px; /* Đặt độ rộng cho cột thứ hai */
+                text-align: left;
+            }
+
+            .detailbar {
+                margin-top: -50px;
+            }
+
+            .detail-table th:nth-child(n+6), .detail-table td:nth-child(n+6) {
+                min-width: 150px;
+            }
+        }
+
+    </style>

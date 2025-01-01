@@ -1,0 +1,133 @@
+<td>
+    <div class="dates-container">
+        {% for date in objects %}
+            <div class="date-item">
+                
+                {% if forloop.last %}
+                    {{ date.day }}/{{ date.month }}/{{ date.year }}
+                {% else %}
+                    <button class="btn btn-sm btn-danger btn-remove"  data-id="{{ date.id }}" onclick="removeRow(this)">-</button>
+                    <span class="strikethrough">{{ date.day }}/{{ date.month }}/{{ date.year }}</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+        
+        <button class="btn btn-sm btn-success btn-add" type="add" data-key="{{ field }}" onclick="addRow(this)">+</button>
+        <button class="btn btn-sm btn-success btn-add" type="tick" data-id="{{ itm.id }}" data-key="{{ field }}" style="display: none;" onclick="addDate(this)">✔</button>
+    </div>
+</td>
+
+<script>
+    function addRow(button) {
+        button.style.display = 'none';
+        const container = button.closest('.dates-container');
+        const newDateDiv = document.createElement('div');
+        newDateDiv.className = 'date-item';
+        newDateDiv.innerHTML = `
+            <input type="text" class="form-control form-control-sm new-date" placeholder="dd/mm/yyyy" oninput="checkDateFormat(this)">
+            
+        `;
+        container.insertBefore(newDateDiv, button); // Thêm trước nút "+"
+        
+        const tickButton = container.querySelector('button[type="tick"]');
+
+        const newInput = newDateDiv.querySelector('input');
+        if (newInput) {
+            newInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") { // Kiểm tra phím Enter
+                    event.preventDefault(); // Ngăn hành vi mặc định (nếu cần)
+                    tickButton.click(); // Kích hoạt sự kiện click trên nút
+                }
+            });
+            newInput.focus();
+        }
+    }
+
+    function checkDateFormat(input) {
+        const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/; // Định dạng d/m/yyyy hoặc dd/mm/yyyy
+        const container = input.closest('.dates-container');
+
+        // Tìm nút tick trong container
+        const tickButton = container.querySelector('button[type="tick"]');
+        
+        if (datePattern.test(input.value)) {
+            tickButton.style.display = 'inline-block'; // Hiển thị nút tick
+        } else {
+            tickButton.style.display = 'none'; // Ẩn nút tick
+        }
+    }
+
+    function addDate(button) {
+        const container = button.closest('.dates-container');
+
+        // Tìm nút tick trong container
+        const addButton = container.querySelector('button[type="add"]');
+
+        if (addButton) {
+            // addButton.style.display = 'inline-block';
+        }
+
+        const input =  container.querySelector('input');
+        button.style.display = 'none';
+
+        const dateValue = input.value;
+        console.log({ id: button.dataset.id, date: dateValue });
+
+        fetch('/api/add-date/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: button.dataset.id, date: dateValue, key: button.dataset.key }), // Gửi dữ liệu ngày
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data', data);
+                alert('Thêm ngày thành công!');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi thêm ngày.');
+            });
+    }
+
+    function removeRow(button) {
+        const row = button.closest('.date-item');
+        // const dataClient = row.dataset.client;
+
+        if (button) {
+            
+            // Gọi API để xóa ngày khỏi server
+            fetch('/api/delete-date/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+
+                body: JSON.stringify({ id: button.dataset.id, key: button.dataset.key })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Dữ liệu từ server:', data);
+                if (data.success) {
+                    row.remove(); // Xóa hàng khỏi giao diện
+                } else {
+                    alert('Không thể xóa ngày!');
+                }
+            })
+            .catch(error => {
+                console.error('Đã xảy ra lỗi:', error);
+                console.log('Không thể xóa ngày!');
+            });
+            
+        } else {
+            // Nếu không có ID (hàng mới tạo nhưng chưa lưu), chỉ xóa khỏi giao diện
+            row.remove();
+        }
+    }
+</script>

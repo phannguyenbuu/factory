@@ -1,0 +1,104 @@
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Lấy URL hiện tại
+        const url = new URL(window.location.href);
+
+        // Danh sách các tham số cần kiểm tra
+        // const paramsToCheck = ["day", "code", "name", "po", "process"];
+
+        // // Duyệt qua từng tham số
+        // paramsToCheck.forEach(param => {
+        //     // Kiểm tra xem tham số có tồn tại trong URL hay không
+        //     const values = url.searchParams.get(param);
+
+        //     if (values) {
+        //         values.split('|').forEach(value => {
+        //             // Tìm checkbox có giá trị tương ứng và đánh dấu
+        //             const checkbox = document.querySelector(`input[type="checkbox"][value="${value}"]`);
+        //             console.log(value, checkbox);
+        //             if (checkbox) {
+        //                 checkbox.checked = true;
+        //             }
+        //         });
+        //     }
+        // });
+    });
+
+    document.querySelectorAll("tbody tr").forEach(row => {
+        row.addEventListener("click", () =>  {
+            const clickedCell = event.target; // Ô được click
+            const cellIndex = Array.from(row.children).indexOf(clickedCell); // Vị trí cột
+            console.log(cellIndex);
+
+            if(row.children[1].textContent != '' && cellIndex != -1 && cellIndex < 7)
+            {
+                document.querySelectorAll("tbody tr").forEach(row => {
+                    row.classList.remove("highlight");
+                });
+
+                row.classList.add("highlight");
+
+                document.getElementById('detail-obj').classList.add('active');
+                const content = row.children[1].textContent; //.split('<br>')[0];
+
+                const code = content.split('\n')[0].trim();
+                const client = content.split('\n')[2].split('-')[0].trim();
+                const contNumber = row.children[2].innerHTML;
+                
+                fetch('/xnt-receive-product-id/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',  // Đảm bảo là JSON
+                    },
+                    body: JSON.stringify({ id: code, client: client, contNumber: contNumber })  // Chuyển đổi dữ liệu thành chuỗi JSON
+                })
+                .then(response => response.json())  // Chuyển đổi dữ liệu phản hồi thành JSON
+                .then(data => {
+                    console.log('Dữ liệu từ server:', data);
+                    //if (data.status === 'success') {
+                    document.getElementById('detail-obj').innerHTML = data.html;
+                    //}
+                })
+                .catch(error => {
+                    console.error('Đã xảy ra lỗi:', error);
+                    console.log('Không thể gửi dữ liệu.');
+                });
+            }
+        })
+    });
+        
+    document.addEventListener('keydown', function(event) {
+        const productTable = document.getElementById('productTable');
+        
+        const tbody = productTable.querySelector('tbody');
+        const rows = Array.from(tbody.rows);  // Lấy tất cả các dòng trong tbody dưới dạng mảng
+        
+        let currentRowIndex = -1;
+        // Tìm dòng hiện tại đang được chọn (nếu có)
+        rows.forEach((row, index) => {
+            if (row.classList.contains('highlight')) {
+                currentRowIndex = index;
+            }
+        });
+
+        // console.log(productTablye,tbody,event.key, currentRowIndex);
+
+        // Nếu không có dòng nào được chọn, chọn dòng đầu tiên
+        if (currentRowIndex === -1 && rows.length > 0) {
+            currentRowIndex = 0;
+            rows[currentRowIndex].classList.add('selected');
+        }
+
+        if (event.key === 'ArrowDown' && currentRowIndex < rows.length - 1) {
+            currentRowIndex++;
+            select_row(rows[currentRowIndex]);
+        }
+
+        if (event.key === 'ArrowUp' && currentRowIndex > 0) {
+            currentRowIndex--;
+            select_row(rows[currentRowIndex]);
+        }
+
+        // console.log('Index', currentRowIndex);
+    });
+</script>

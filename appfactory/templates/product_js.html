@@ -1,0 +1,416 @@
+<script>
+    function convertDateFormat(inputString) {
+        // Kiểm tra nếu chuỗi có dấu '-'
+        if (inputString.includes('-')) {
+            // Tách chuỗi theo dấu '-'
+            const dateParts = inputString.split('-');
+
+            // Kiểm tra nếu chuỗi có đúng 3 phần và là số
+            if (dateParts.length === 3 && !isNaN(dateParts[0]) && !isNaN(dateParts[1]) && !isNaN(dateParts[2])) {
+                const year = dateParts[0]; // yyyy
+                const month = dateParts[1]; // mm
+                const day = dateParts[2]; // dd
+
+                // Chuyển đổi thành định dạng dd-mm
+                const formattedDate = `${day}-${month}`;
+                return formattedDate; // Trả về kết quả
+            }
+        }
+        return inputString; // Nếu không phải định dạng ngày tháng, trả lại chuỗi gốc
+    }
+    
+
+    function reformatHeader() {
+        const rows = document.querySelectorAll('table th');
+        rows.forEach(row => {
+            row.textContent = convertDateFormat(row.textContent);
+        });
+    }
+
+    function deleteColumnByHeader(key)
+    {
+        const headerRow = document.querySelector('table thead tr');
+        const rows = document.querySelectorAll('table tr');
+
+        // Find the index of the 'date' and 'comment' columns
+        const headers = Array.from(headerRow.children);
+        const dateIndex = headers.findIndex(header => header.textContent === key);
+        // console.log(rows.length);
+        // Remove the 'date' and 'comment' columns
+        if (dateIndex !== -1) {
+            // Remove the 'date' column from all rows
+            rows.forEach(row => {
+                if (row.cells.length > 1)
+                    row.removeChild(row.children[dateIndex]);
+            });
+        }
+    }
+
+    function keepDayColumnByHeader(key)
+    {
+        const headerRow = document.querySelector('table thead tr');
+        const rows = document.querySelectorAll('table tr');
+
+        function isValidDateFormat(str) {
+            const regex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])$/;
+            return regex.test(str);
+        }
+
+        // Find the index of the 'date' and 'comment' columns
+        Array.from(headerRow.children).forEach((header) => {
+            if(header.textContent.includes('-') && header.textContent != key)
+            {
+                rows.forEach(row => {
+                    if (row.cells.length > 1)
+                        row.removeChild(row.children[dateIndex]);
+                });
+            }
+        });
+    }
+
+    function _addColumns(uniqueKeysArray)
+    {
+        const headerRow = document.querySelector('table thead tr');
+        // console.log('Unique Keys:', uniqueKeysArray);
+        const rows = document.querySelectorAll('table tr'); // Get all rows
+
+        uniqueKeysArray.forEach(txt => {
+            var newColumnHeader = document.createElement('th');
+            newColumnHeader.textContent = txt; // Tiêu đề cột mới
+            newColumnHeader.classList.add('counter');
+            headerRow.appendChild(newColumnHeader);
+
+            newColumnHeader = document.createElement('th');
+            newColumnHeader.textContent = txt; // Tiêu đề cột mới
+            newColumnHeader.classList.add('volume');
+            newColumnHeader.classList.add("has-tooltip");
+
+            // var div = document.createElement('div');
+            // div.innerHTML = 'title';
+            // div.classList.add('custom-tooltip');
+            // newColumnHeader.appendChild(div);
+
+            headerRow.appendChild(newColumnHeader);
+
+            i = 0;
+
+            rows.forEach(row => {
+                if(i != 0)
+                {
+                    var newCell = document.createElement('td'); // Create a new cell
+
+                    newCell.textContent =  ''; // You can add content if needed
+                    newCell.classList.add('counter');
+                    row.appendChild(newCell); // Append the new cell to the row
+
+                    newCell = document.createElement('td'); // Create a new cell
+
+                    newCell.textContent =  ''; // You can add content if needed
+                    newCell.classList.add('volume');
+                    row.appendChild(newCell); // Append the new cell to the row
+                }
+                i++;
+            });
+        });
+
+        document.querySelectorAll('.has-tooltip').forEach(th => {
+        th.addEventListener('mouseover', function (e) {
+            const tooltip = this.querySelector('.custom-tooltip');
+            tooltip.style.top = `${e.clientY + 10}px`;
+            tooltip.style.left = `${e.clientX}px`;
+        });
+        th.addEventListener('mouseout', function () {
+            const tooltip = this.querySelector('.custom-tooltip');
+            tooltip.style.visibility = 'hidden';
+            tooltip.style.opacity = 0;
+        });
+        });
+    }
+
+    function roundToTwoDecimals(num) {
+        return Math.round(num * 100) / 100;
+    }
+
+    // Hàm để tách chuỗi thành object
+    function parseToObject(input, filter_days = undefined) {
+        input = input.startsWith("{") ? input.slice(1, -1) : input;
+        input = input.endsWith("}") ? input.slice(0, -1) : input;
+        input = input.replace(/ /g,'').replace(/'/g,'')
+
+        var items = [];
+        
+        if(input.includes(';'))
+            items = input.split(';').filter(item => item); // Tách chuỗi và loại bỏ các phần tử rỗng
+        else if (input.includes(','))
+            items = input.split(',').filter(item => item); // Tách chuỗi và loại bỏ các phần tử rỗng
+        else
+            items.push(input);
+
+        const result = {};
+
+        if(items)
+        {
+            
+            items.forEach(item => {
+                var match = undefined;
+
+                if(item.includes('[') && item.includes(']'))
+                    match = item.replace(']','').split('[');
+                else if(item.includes(':'))
+                    match = item.split(':');
+
+                if (match) {
+                    var key = match[0];//.replace('/','');//.split('/')[0]; 
+                    // let __arrs = match[0].split('/');
+
+                    // Lấy phần sau '/' và chia tiếp bằng ':'
+                    // var key = __arrs[0] + ':' + __arrs[1].split(':').pop();
+
+                    if(key.includes('-')) // Khi key là day
+                    {
+                        const arr = key.split('-');
+                        
+                        if(filter_days && !filter_days.includes(key))
+                            key = undefined;
+                    }
+
+                    
+
+                    if(key)
+                    {
+                        // console.log('filter', filter_days, key);
+                        const value = parseInt(match[1]); // Giá trị (30, 60, 120...)
+
+                        // Kiểm tra xem key đã tồn tại trong result chưa, nếu có thì cộng thêm giá trị
+                        if (result[key]) {
+                            result[key] += value;
+                        } else {
+                            result[key] = value;
+                        }
+                    }
+                }
+            });
+        }
+
+        // console.log('r',items, result);
+
+        return result;
+    }
+
+    function __group_same_value(value, filter_days = undefined) 
+    {
+        // console.log(value);
+        const parsedData = parseToObject(value, filter_days);
+        var ls = [];
+
+        const ls_process = Object.keys(parsedData);
+        // console.log(targetCell.classList);
+
+        ls_process.forEach(__k => {
+            if(parsedData[__k] && parsedData[__k] != 0)
+                ls.push({[__k] : parseFloat(parsedData[__k])});
+        });
+        
+        const grouped = ls.reduce((acc, obj) => {
+            const [key, value] = Object.entries(obj)[0]; // Lấy key và value của đối tượng
+            if (!acc[value]) {
+                acc[value] = [];
+            }
+            acc[value].push(key);
+            return acc;
+        }, {});
+
+        return Object.entries(grouped)
+            .sort(([valueA], [valueB]) => valueA.localeCompare(valueB))
+            .map(([value, keys]) => {
+                return `<div class="round-border">* ${keys.join(", ")}: ${value.toLocaleString('en-US')}</div>`;
+            })
+            .join(""); // Kết hợp các nhóm
+    }
+    
+    function _setValueByColumns(uniqueKeysArray)
+    {
+        const headerRow = document.querySelector('table thead tr');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const _day = urlParams.get('day');
+        const dayFilters = _day ?  _day.split('|') : undefined;
+
+        const _process = urlParams.get('process');
+        const processFilters = _process ?  _process.split('|') : undefined;
+
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const dateCellsInRow = row.querySelectorAll('.date-content');
+
+            uniqueKeysArray.forEach(key => {
+                // Duyệt qua từng ô .date-content trong dòng
+                dateCellsInRow.forEach((cell, index) => {
+                    const jsonData = cell.textContent.trim();
+
+                    if(jsonData)
+                        try {
+                            // console.log(key, jsonData);
+                            const data = JSON.parse(jsonData);
+                            const result = Object.keys(data).filter(k => k.startsWith(`${key}/`));
+                            // console.log(jsonData, data, result);
+                            
+                            if(result.length > 0)
+                            {
+                                var s_counter = '', s_vol = '';
+
+                                result.forEach(itm => {
+                                    const new_key = itm.split('/').pop().trim();
+
+                                    const value = data[itm] || '';
+                                    if(value === '0') value = '';
+
+                                    // Tìm cột có tiêu đề là key trong header
+                                    //console.log('k',new_key,processFilters, processFilters.filter(__itm => itm.trim().includes(new_key)));
+
+                                    if(!processFilters || processFilters.filter(__itm => __itm.trim().includes(new_key)).length > 0)
+                                    {
+                                        s_counter += `${new_key}:${value.split('/')[0]}<br>`;
+                                        s_vol += `${new_key}:${value.split('/').pop()}<br>`;
+                                    }
+                                });
+
+                                const headerCells = headerRow.querySelectorAll('th');
+                                const columnIndexes = Array.from(headerCells)
+                                    .map((headerCell, index) => headerCell.textContent === key ? index : -1)
+                                    .filter(index => index != -1);
+                                
+                                // console.log('columnIndexes', columnIndexes);
+                                // Duyệt qua tất cả các chỉ số cột tìm được
+                                columnIndexes.forEach(columnIndex => {
+                                    const targetCell = row.cells[columnIndex];
+
+                                    if(targetCell.classList.contains('counter') && s_counter) 
+                                        targetCell.innerHTML = `<div class="round-border">${s_counter}</div>`;//__group_same_value(value, multi); // Điền giá trị vào ô tương ứng
+                                    else if(s_vol)
+                                        targetCell.innerHTML = `<div class="round-border">${s_vol}</div>`;
+                                    
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error parsing JSON:', error);
+                        }
+                });
+            });
+        });
+    }
+
+    // Hàm lấy tất cả các td có class 'date-content'
+    function getDateContent() {
+        const dateCells = document.querySelectorAll('.date-content');
+        const table = document.getElementById('productDetailTable');
+        
+        const uniqueKeys = new Set();
+
+        // Lặp qua và in nội dung của các ô td
+        dateCells.forEach(cell => {
+            const jsonData = cell.textContent; // Lấy chuỗi JSON trong ô
+            try {
+                const data = JSON.parse(jsonData); // Chuyển chuỗi JSON thành đối tượng
+                
+                // Lọc các ngày có nội dung không rỗng
+                // lsContents += [Object.entries(data).filter(([key, value]) => value !== "")];
+
+                Object.keys(data).forEach(key => {
+                    if(data[key] != '' && data[key] != '0')
+                        uniqueKeys.add(key.split('/')[0]);  // Thêm key vào Set, Set tự động loại bỏ trùng
+                });
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+            }
+        });
+
+        const uniqueKeysArray = Array.from(uniqueKeys).sort((a, b) => {
+            // Tách ngày và tháng từ mỗi phần tử
+            const [dayA, monthA] = a.split('-').map(Number);
+            const [dayB, monthB] = b.split('-').map(Number);
+
+            // So sánh theo tháng trước, rồi tới ngày
+            if (monthA !== monthB) {
+                return monthA - monthB; // Ưu tiên tháng nhỏ trước
+            }
+            return dayA - dayB; // Nếu tháng giống nhau, sắp xếp theo ngày
+        });
+
+        _addColumns(uniqueKeysArray);
+        _setValueByColumns(uniqueKeysArray);
+    }
+
+    //Sửa cột ID
+    function format_id_column(tableId){
+        const table = document.getElementById(tableId);
+        const rows = table.querySelectorAll("tbody tr");
+        const result = {};
+
+        rows.forEach(row => {
+            console.log(row);
+            if(row.children[1])
+            {
+                const s = row.children[1].textContent;
+
+                if(s.includes('{') && s.includes('}'))
+                {
+                    const s1 = s.split('{')[0];
+                    const s2 = s.split('{')[1]; // Cột thứ 2
+                    
+                    // console.log(__group_same_value(s));
+                    row.children[1].innerHTML = s1 + '<br>'; // + __group_same_value(s2);
+                }
+            }
+        });
+
+        
+        return result;
+    }
+
+    function hide_not_in_day_filter_columns(tableId) 
+    {
+        // Bước 1: Lấy tham số 'day' từ URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const _day = urlParams.get('day');
+        const dayFilters = _day ?  _day.split('|') : undefined;
+
+        const _process = urlParams.get('process');
+        const processFilters = _process ?  _process.split('|') : undefined;
+
+        // Bước 2: Nếu có tham số 'day', ta tách nó thành các ngày
+        if (dayFilters) {
+            // Bước 3: Duyệt qua tất cả các cột trong bảng
+            const table = document.getElementById(tableId); // Chọn bảng
+            const headers = table.querySelectorAll('th'); // Lấy tất cả các header
+            const rows = table.querySelectorAll('tr'); // Lấy tất cả các hàng
+
+            // Duyệt qua các header để kiểm tra các cột cần ẩn
+            headers.forEach((header, index) => {
+                const headerText = header.textContent.trim();
+                console.log(headerText, headerText.includes('-') && !dayFilters.includes(headerText));
+                // Bước 4: Nếu header chứa dấu "-" và không phải là "day"
+                if (headerText.includes('-') && !dayFilters.includes(headerText)) {
+                    header.style.display = 'none';
+                    header.setAttribute('data-show', 'none');
+
+                    for (let row of rows)
+                    {
+                        row.children[index].style.display = 'none'; // Ẩn cột
+                        row.children[index].setAttribute('data-show', 'none'); // Ẩn cột
+                    }
+                }
+            });
+        }
+
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        getDateContent();
+        deleteColumnByHeader("Date");
+        deleteColumnByHeader("Comment");
+        reformatHeader();
+        format_id_column('productTable');
+        hide_not_in_day_filter_columns('productTable');
+        _showVolumeMode();
+    });
+</script>

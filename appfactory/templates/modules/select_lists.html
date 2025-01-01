@@ -1,0 +1,42 @@
+{% load custom_filters %}
+
+<div class="sidebar" id ="sidebar-obj">
+    <div id="first-filter-group">
+        <label id="label-{{ label|slugify }}">LIST: {{ products|length }}  items</label>
+        <button class="btn btn-primary" id="filter" onclick="FilterItems()">FILTER</button>
+    </div>
+                
+    {% for label, item_list in select_lists.items %}
+        <div class="list-item-container" id="container-{{ label|slugify }}">
+            <label id="label-{{ label|slugify }}"><i class="fas fa-th-large"></i> {{ label }}</label>
+            <input type="text" id="search-box-{{ label|slugify }}" placeholder="Search..." />
+            <ul class="suggestions"></ul>
+
+            <div class="filter-group" id ="filter-group-{{ label|slugify }}">
+                {% for key in item_list %}
+                    {% with title_1=key.label|replace:'",' %}
+                        {% with title=title_1|replace:'Kế hoạch Tháng ,' %}
+                            <div class="list-item">
+                                <input type="checkbox" id="{{ label|slugify }}-{{ title|slugify }}" 
+                                    name="{{ label|slugify }}" value='{{ title }}'  class="checkbox-input-{{ label|slugify }}">
+                                <label for="{{ label|slugify }}-{{ title|slugify }}"  class="checkbox-label-{{ label|slugify }}" title='{{ title }}'>
+                                    {% if label == "Process" %}
+                                        <i class="fas fa-{{ key.icon }}" style="color: {{ key.color }};"></i>&nbsp;&nbsp;{{ title }}
+                                    {% elif label == "PO" %}
+                                        <p style="background-color: {{ key.color }};">{{ title }}</p>
+                                    {% else %}
+                                        {% if title|length > 30 %}
+                                            {{ title|slice:":25" }}...  <!-- Rút gọn còn 50 ký tự -->
+                                        {% else %}
+                                            {{ title }}
+                                        {% endif %}
+                                    {% endif %}
+                                </label>
+                            </div>
+                        {% endwith %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>

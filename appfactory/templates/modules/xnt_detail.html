@@ -1,0 +1,46 @@
+<h3>CLIENT: {{ client }}</h3>
+<p>PO / CONT: {{ id }} / {{ contnumber }}</p>
+
+{% if details %}
+    <table class="detail-table table-striped">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Code</th>
+                <th>Name</th>
+                
+                <th>Qty</th>
+                <th>Input</th>
+                <th>Output</th>
+                                
+                <th>Stock</th>
+                <th>StockVol</th>
+
+                <th>Date</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for itm in details %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ itm.code }}</td>
+                    <td>{{ itm.name }}</td>
+
+                    <td><b>{{ itm.qty }}</b></td>
+                    <td>{{ itm.input }}</td>
+                    <td>{{ itm.output }}</td>
+                    
+                    <td>{{ itm.instock }}</td>
+                    <td>{{ itm.instockVolume|floatformat:6 }}</td>
+
+                    <td>{{ itm.documentDate }}</td>
+                    <td>{{ itm.note|default:"--" }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <i>No detail item found</i>
+{% endif %}
+

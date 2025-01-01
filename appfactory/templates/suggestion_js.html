@@ -1,0 +1,65 @@
+<script>
+class FilterList {
+    constructor(container) {
+        this.container = container;
+        
+        this.label = container.id.replace("container-", "").toLowerCase(); // Trích xuất nhãn từ ID
+        
+        this.searchBox = this.container.querySelector(`#search-box-${this.label}`);
+        this.suggestions = this.container.querySelector(".suggestions");
+        this.filterGroup = this.container.querySelector(`#filter-group-${this.label}`);
+        // console.log(this.label,`#filter-group-${this.label}`);
+        this.listItems = this.filterGroup.querySelectorAll(".list-item");
+        // console.log('id:', this.label, container.id, this.label, this.searchBox, this.suggestions, this.filterGroup);
+        this.init();
+    }
+
+    // Lọc danh sách dựa trên từ khóa tìm kiếm
+    filterItems(query) {
+        query = query.toLowerCase();
+        this.listItems.forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(query) ? "block" : "none";
+        });
+    }
+
+    // Gợi ý từ khóa phù hợp
+    generateSuggestions(query) {
+        const matches = Array.from(this.listItems)
+            .map((item) => item.textContent.trim())
+            .filter((text) => text.toLowerCase().includes(query.toLowerCase()));
+
+        this.suggestions.innerHTML = ""; // Xóa các gợi ý cũ
+        matches.forEach((text) => {
+            const li = document.createElement("li");
+            li.textContent = text;
+            li.addEventListener("click", () => {
+                this.searchBox.value = text;
+                this.filterItems(text); // Lọc danh sách theo gợi ý được chọn
+                this.suggestions.style.display = "none";
+            });
+            this.suggestions.appendChild(li);
+        });
+
+        this.suggestions.style.display = matches.length > 0 ? "block" : "none";
+    }
+
+    // Khởi tạo các sự kiện
+    init() {
+        this.searchBox.addEventListener("input", (e) => {
+            const query = e.target.value.trim();
+            this.filterItems(query); // Lọc danh sách
+            this.generateSuggestions(query); // Hiển thị gợi ý
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const containers = document.querySelectorAll(".list-item-container");
+    containers.forEach((container) => {
+        if(container.id != 'first-filter-group') 
+            new FilterList(container);
+    });
+});
+
+</script>

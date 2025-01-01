@@ -1,0 +1,16 @@
+<script>
+    document.getElementById('toggle-sidebar').addEventListener('click', () => {
+        document.getElementById('sidebar-obj').classList.toggle('active');
+
+        if(document.getElementById('sidebar-obj').classList.contains('active'))
+            document.getElementById('detail-obj').classList.remove('active');
+
+        // console.log('panel', document.getElementById('detail-obj'));
+    });
+
+    // document.getElementById('toggle-detail').addEventListener('click', () => {
+    //     console.log('close');
+    //     document.getElementById('detail-obj').classList.remove('active');
+    // });
+    
+</script>

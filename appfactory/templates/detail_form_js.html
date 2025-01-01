@@ -1,0 +1,168 @@
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Lấy URL hiện tại
+        const url = new URL(window.location.href);
+
+        // Danh sách các tham số cần kiểm tra
+        const paramsToCheck = ["day", "code", "name", "po", "process"];
+
+        // Duyệt qua từng tham số
+        paramsToCheck.forEach(param => {
+            // Kiểm tra xem tham số có tồn tại trong URL hay không
+            const values = url.searchParams.get(param);
+
+            if (values) {
+                values.split('|').forEach(value => {
+                    // Tìm checkbox có giá trị tương ứng và đánh dấu
+                    const checkbox = document.querySelector(`input[type="checkbox"][value="${value}"]`);
+                    console.log(value, checkbox);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+        });
+    });
+
+    function FilterItems() {
+        // Lấy tất cả các checkbox
+        const checkboxes = document.querySelectorAll('.filter-group input[type="checkbox"]');
+        const selectedItems = {};
+
+        checkboxes.forEach((checkbox) => {
+            if (checkbox.checked) {
+                const label = checkbox.name;  // Lấy tên label từ thuộc tính name của checkbox
+                if (!selectedItems[label]) {
+                    selectedItems[label] = []; // Tạo mảng mới nếu chưa có
+                }
+                selectedItems[label].push(checkbox.value.trim()); // Thêm giá trị đã chọn vào mảng
+            }
+        });
+
+        // Tạo chuỗi theo cấu trúc "label = selected_item_1, selected_item_2, ..."
+        const resultArray = Object.keys(selectedItems).map((label) => {
+            return `${label}=${selectedItems[label].join("|")}`;
+        });
+
+        // Kết quả cuối cùng
+        const resultString = resultArray.join("&");
+        // console.log('href',resultString);  // Hoặc hiển thị lên UI tùy theo nhu cầu
+        
+        window.location.href = resultString ? '?' + resultString : '';
+    }
+
+    function formatDateString(rawDateString) {
+
+        return rawDateString;
+        // Tách thông tin ngày và dữ liệu
+        const dateMatch = rawDateString.match(/Date:\{(.*?)\}/);
+        if (!dateMatch) return ''; // Trả về chuỗi rỗng nếu không khớp
+
+        const dateStr = dateMatch[1]; // Lấy chuỗi bên trong {}
+        const [rawDate, rawInfo] = dateStr.replace(/[{}']/g, '').split(': '); // Bỏ ký tự thừa và tách phần ngày và thông tin
+        const [year, month, day] = rawDate.split('-'); // Tách ngày tháng năm
+        const materialInfo = rawInfo.match(/(PHÔI)\((\d+)\)/); // Tách PHÔI và số lượng
+
+        if (!materialInfo) return ''; // Trả về chuỗi rỗng nếu không khớp thông tin vật liệu
+
+        const material = materialInfo[1].toLowerCase(); // Chuyển 'PHÔI' thành 'phôi'
+        const quantity = materialInfo[2];
+        return `${day}-${month}:${material}-${quantity}`; // Trả về chuỗi định dạng dd-mm:phôi-số lượng
+    }
+
+    function _xtract_data(s) {
+        return s.replace('{','').replace('}','').replace(/'/g, '').split(/\/|:/);
+    }
+    
+    function round_border_date_info(s, dayFilters, processFilters){
+        var res = [];
+
+        s.replace('{','').replace('}','').split("',").forEach( __s => { 
+            var day_itm = __s.replace(/'/g,'') + '<br>';
+
+            if(!dayFilters || dayFilters.filter(item => day_itm.trim().startsWith(item + '/')).length > 0)
+            {
+                if(!processFilters || processFilters.filter(item => day_itm.trim().includes('/' + item + ':')).length > 0)
+                {
+                    res.push(day_itm);
+                    // console.log(res);
+                }
+            }
+        });
+        
+        return res.length > 0 ? '<div class="round-border">' + res.join('<br>') + '</div>' : undefined;
+    }
+
+    document.querySelectorAll("tbody tr").forEach(row => {
+        row.addEventListener("click", () => select_row(row));
+    });
+
+    function select_row(row) {
+        if(row.children[1].textContent != '')
+        {
+            document.querySelectorAll("tbody tr").forEach(row => {
+                row.classList.remove("highlight");
+            });
+
+            row.classList.add("highlight");
+
+            document.getElementById('detail-obj').classList.add('active');
+            const code = row.children[1].innerHTML; //.split('<br>')[0];
+            
+            fetch('/receive-product-id/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',  // Đảm bảo là JSON
+                },
+                body: JSON.stringify({ productid: code })  // Chuyển đổi dữ liệu thành chuỗi JSON
+            })
+            .then(response => response.json())  // Chuyển đổi dữ liệu phản hồi thành JSON
+            .then(data => {
+                console.log('Dữ liệu từ server:', data);
+                //if (data.status === 'success') {
+                document.getElementById('detail-obj').innerHTML = data.html;
+                //}
+            })
+            .catch(error => {
+                console.error('Đã xảy ra lỗi:', error);
+                console.log('Không thể gửi dữ liệu.');
+            });
+        }
+    }
+        
+    document.addEventListener('keydown', function(event) {
+            
+        const productTable = document.getElementById('productTable');
+        
+        const tbody = productTable.querySelector('tbody');
+        const rows = Array.from(tbody.rows);  // Lấy tất cả các dòng trong tbody dưới dạng mảng
+        
+        let currentRowIndex = -1;
+        // Tìm dòng hiện tại đang được chọn (nếu có)
+        rows.forEach((row, index) => {
+            if (row.classList.contains('highlight')) {
+                currentRowIndex = index;
+            }
+        });
+
+        // console.log(productTablye,tbody,event.key, currentRowIndex);
+
+        // Nếu không có dòng nào được chọn, chọn dòng đầu tiên
+        if (currentRowIndex === -1 && rows.length > 0) {
+            currentRowIndex = 0;
+            rows[currentRowIndex].classList.add('selected');
+        }
+
+        if (event.key === 'ArrowDown' && currentRowIndex < rows.length - 1) {
+            currentRowIndex++;
+            select_row(rows[currentRowIndex]);
+        }
+
+        if (event.key === 'ArrowUp' && currentRowIndex > 0) {
+            currentRowIndex--;
+            select_row(rows[currentRowIndex]);
+        }
+
+        // console.log('Index', currentRowIndex);
+    });
+</script>

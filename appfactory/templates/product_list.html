@@ -1,0 +1,228 @@
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product List</title>
+    <!-- Link đến Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Thêm Choices.js CSS và JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <!-- Thêm Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    {% include 'product_css.html' %}
+    <style>
+        th:nth-child(1), td:nth-child(1) {
+            width: 50px;
+        }
+
+        #productTable tr:nth-child(1) {
+            background-color: #b4e4f7 !important;
+        }
+
+        th:nth-child(n+6), td:nth-child(n+6) {
+            width: 100px; /* Đặt độ rộng cho cột đầu tiên */
+        }
+        td:nth-child(n+6) {
+            font-size:0.8rem;
+        }
+
+        th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) {
+            width: 200px; /* Đặt độ rộng cho cột thứ hai */
+            text-align: left;
+        } 
+        
+        th:nth-child(4), td:nth-child(4),th:nth-child(5), td:nth-child(5) {
+            width: 50px; /* Đặt độ rộng cho cột thứ hai */
+            text-align: center;
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        {% include 'modules/footerbar.html' %}
+        {% include 'modules/select_lists.html' %}
+
+        <div class="tablebar" id="table-obj">
+            <!-- Bảng để hiển thị danh sách sản phẩm -->
+            <table class="table table-striped" id="productTable">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>MÃ SP</th>
+                        <th>TÊN SP</th>
+                        <th id="head-counter">Slg SP</th>
+                        <th id="head-volume">Volume</th>
+                        
+                        {% for itm in FilterDay %}
+                            <th class="counter" id = '{{ itm.label }}'>{{ itm.label }}</th>
+                        {% endfor %}
+                        
+                        {% for itm in FilterDay %}
+                            <th class="volume" id = '{{ itm.label }}-vol'>{{ itm.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>T</td>
+                        <td>TỔNG CỘNG</td>
+                        <td></td>
+                        <td class="counter"></td>
+                        <td class="volume"></td>
+                        {% for day in FilterDay %}
+                            {% include 'modules/table_date_column.html' with type='counter' datalist=TotalQty %}
+                            {% include 'modules/table_date_column.html' with type='volume' datalist=TotalVol %}
+                        {% endfor %}
+                    </tr>
+                    {% for product in products %}
+                        <tr>
+                            <td>{{ forloop.counter }} </td>
+                            <td>{{ product.get_code }}</td>
+                            <td>
+                                <p>{{ product.get_name }}</p>
+
+                                {% for item in select_lists.PO %}
+                                    {% if item.label == product.get_po %}
+                                        <p class="po-note" style = 'background-color:  {{ item.color }};'>{{ product.get_po|replace:'Kế hoạch Tháng,' }}</p>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="counter">
+                                {{ product.get_volume.all_product_qty }}
+                            </td>
+
+                            <td class="volume">
+                                {{ product.get_volume.all_product_volume }}
+                            </td>
+                            
+                            {% for day in FilterDay %}
+                                {% include 'modules/table_date_column.html' with type='counter' datalist=product.get_summary_qty_by_process %}
+                                {% include 'modules/table_date_column.html' with type='volume' datalist=product.get_summary_volume_by_process %}
+                            {% endfor %}
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center">No products found</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="detail-obj" class="detailbar">
+            
+        </div>
+
+        <button id="toggle-sidebar" class="toggle-button">☰</button>
+    </div>
+
+    
+    <!-- Link đến Bootstrap JS và thêm JavaScript để sắp xếp bảng -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% include 'suggestion_js.html' %}
+    <!-- {% include 'product_js.html' %} -->
+    {% include 'detail_form_js.html' %}
+    {% include 'product_toggle_button_js.html' %}
+    
+    <script>
+        
+
+        function _showVolumeMode() {
+            var selectedValue = document.querySelector("#mode").value;
+
+            if (selectedValue.toLowerCase() === 'volume') {
+                document.getElementById('head-counter').style.display = 'none';
+                document.getElementById('head-volume').style.display = '';
+
+                // Hiển thị tất cả các ô Volume
+                var volumeCells = document.querySelectorAll('.volume');
+                volumeCells.forEach(function(cell) {
+                    if(cell.getAttribute('data-show') != 'none')
+                        cell.style.display = '';
+                });
+
+                var slgCells = document.querySelectorAll('.counter');
+                slgCells.forEach(function(cell) {
+                    cell.style.display = 'none';
+                });
+            }else {
+                document.getElementById('head-counter').style.display = '';
+                document.getElementById('head-volume').style.display = 'none';
+
+                // Ẩn tất cả các ô Volume
+                var volumeCells = document.querySelectorAll('.volume');
+                volumeCells.forEach(function(cell) {
+                    cell.style.display = 'none';
+                });
+
+                var slgCells = document.querySelectorAll('.counter');
+                slgCells.forEach(function(cell) {
+                    if(cell.getAttribute('data-show') != 'none')
+                        cell.style.display = '';
+                });
+            } 
+        }
+
+        function hide_not_in_day_filter_columns(tableId) 
+        {
+            // Bước 1: Lấy tham số 'day' từ URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const _day = urlParams.get('day');
+            const dayFilters = _day ?  _day.split('|') : undefined;
+
+            const _process = urlParams.get('process');
+            const processFilters = _process ?  _process.split('|') : undefined;
+
+            // Bước 2: Nếu có tham số 'day', ta tách nó thành các ngày
+            if (dayFilters) {
+                // Bước 3: Duyệt qua tất cả các cột trong bảng
+                const table = document.getElementById(tableId); // Chọn bảng
+                const headers = table.querySelectorAll('th'); // Lấy tất cả các header
+                const rows = table.querySelectorAll('tr'); // Lấy tất cả các hàng
+
+                // Duyệt qua các header để kiểm tra các cột cần ẩn
+                headers.forEach((header, index) => {
+                    const headerText = header.textContent.trim();
+                    console.log(headerText, headerText.includes('-') && !dayFilters.includes(headerText));
+                    // Bước 4: Nếu header chứa dấu "-" và không phải là "day"
+                    if (headerText.includes('-') && !dayFilters.includes(headerText)) {
+                        header.style.display = 'none';
+                        header.setAttribute('data-show', 'none');
+
+                        for (let row of rows)
+                        {
+                            row.children[index].style.display = 'none'; // Ẩn cột
+                            row.children[index].setAttribute('data-show', 'none'); // Ẩn cột
+                        }
+                    }
+                });
+            }
+
+        }
+
+        _showVolumeMode();
+
+        function goToDetails(productId) {
+            // Redirect to the product details page using the product ID
+            window.location.href = `/product/${productId}/`;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // hide_not_in_day_filter_columns('productTable');
+        });
+    </script>
+</body>
+</html>

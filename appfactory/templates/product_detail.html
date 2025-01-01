@@ -1,0 +1,73 @@
+<h3>{{ id }}</h3>
+<p>{{ name }}</p>
+
+
+
+{% if details %}
+    <table class="table-striped">
+        <thead>
+            <tr>
+                <td></td>
+                {% for itm in total_datelist %}
+                    <th>{{ itm }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>SLG</td>
+                {% for itm in total_qty %}
+                    <td><div class="round-border">{{ itm|safe }}</div></td>
+                {% endfor %}
+            </tr>
+            <tr>
+                <td>Volume</td>
+                {% for itm in total_vol %}
+                    <td><div class="round-border">{{ itm|safe }}</div></td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="detail-table table-striped">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Qty</th>
+                <th>Volume</th>
+                <th>Date</th>
+                <th>Volume</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for itm in details %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ itm.name }}</td>
+                    <td>{{ itm.width }}*{{ itm.length }}*{{ itm.depth }}</td>
+                    <td>{{ itm.volume.all_this_items_qty }}</td>
+                    <td>{{ itm.volume.this_item_volume }}</td>
+                    <td>
+                        <div class="round-border">
+                            {% for dt in itm.date %}
+                                {{ dt.day }}-{{ dt.month }}/{{ dt.process }}:{{ dt.qty }}<br>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="round-border">
+                            {% for dt in itm.date %}
+                                {{ dt.day }}-{{ dt.month }}/{{ dt.process }}:{{ dt.volume }}<br>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <i>No detail item found</i>
+{% endif %}
+
