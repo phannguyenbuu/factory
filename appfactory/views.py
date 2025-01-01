@@ -2,7 +2,7 @@
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.shortcuts import render
-from appfactory.models import ProductItem, DetailItem, DateItem, sum_qty_to_json, SHEET_TYPE_SP, ShipDetailItem, ShipQtyByContainerRelation, ContInfor
+from appfactory.models import GlobalVars,ProductItem, DetailItem, DateItem, get_details_date_qty, sum_qty_to_json, SHEET_TYPE_SP, ShipDetailItem, ShipQtyByContainerRelation, ContInfor
 from django.db.models import Q
 import json
 from datetime import datetime
@@ -102,62 +102,11 @@ def generate_colors(n):
         colors.append(hex_color)
     return colors
 
-def get_date_list(details):
-    # res = []
-    unique_days_months = (details.values('day', 'month').distinct().order_by('month', 'day'))
-        
-    # for item in unique_days_months:
-    #     res += [(f"{item['day']}-{item['month']}")]
-
-    return [{'label': (f"{item['day']}-{item['month']}")} for item in unique_days_months]
-
-def total_process_by_date(selected_products, day_str):
-    day, month = day_str.split('-')
-    day = int(day)
-    month = int(month)
-
-    date_items = [date for item in selected_products for date in item.get_date().all()]
-
-    process_list = set()
-    for itm in date_items:
-        process_list.add(itm.process)
-
-    # print('date_items', len(date_items), len(process_list))
-    
-    res_qty = {}
-    res_vol = {}
-
-    for process in process_list:
-        if (not getattr(settings, 'ref_process_value', None)) or (process in settings.ref_process_value):
-            filter_date_items = [itm for itm in date_items if itm.day == day and itm.month == month and itm.process == process]
-            # print(day,month,len(filter_date_items))
-            res_qty[process] = sum(itm.qty for itm in filter_date_items)
-            res_vol[process] = sum(itm.volume for itm in filter_date_items)
-    
-    return res_qty.items(), res_vol.items()
-
-def get_details_date_qty(product_query_set):
-    datelist = get_date_list(DateItem.objects.filter(qty__gt=0))
-
-    total_qty = {}
-    total_vol = {}
-
-    for itm in datelist:
-        day = itm['label']
-        ls1, ls2 = total_process_by_date(product_query_set, day)
-        
-        v = sum_qty_to_json(ls1)
-
-        if v != '':
-            total_qty[day] =  v
-            total_vol[day] =  sum_qty_to_json(ls2, False)
-
-    return total_qty, total_vol, datelist
-
-
+from datetime import datetime
 
 def product_list(request):
-    # day_value = __get_array_vals(request, 'day')
+    start_time = datetime.now()
+
     process_value = __get_array_vals(request, 'process')
     code_value = __get_array_vals(request, 'code')
     name_value = __get_array_vals(request, 'name')
@@ -167,41 +116,60 @@ def product_list(request):
     settings.ref_process_value = __get_array_vals(request, 'process')
 
     print("Code:", code_value,"Name:", name_value,"Day:", settings.ref_day_value,"PO:", po_value,"Process:", settings.ref_process_value)
+    print ('Time', (datetime.now() - start_time).total_seconds())
+
+    filtered_queryset = ProductItem.objects.all()
+
+    if any(s != None for s in [code_value, name_value, po_value, settings.ref_process_value, settings.ref_day_value]):
+        if code_value != None:
+            filtered_queryset = [item for item in filtered_queryset if any(code in item.code for code in code_value)]
+
+        print ('Time_code', code_value, (datetime.now() - start_time).total_seconds())
+
+        if name_value != None:
+            filtered_queryset = [item for item in filtered_queryset if any(name in item.name for name in name_value)]
+
+        print ('Time_name', (datetime.now() - start_time).total_seconds())
+
+        if po_value != None:
+            filtered_queryset = [item for item in filtered_queryset if any(po in item.po for po in po_value)]
+
+        print ('Time_po', (datetime.now() - start_time).total_seconds())
+
+        if settings.ref_process_value != None:
+            filtered_queryset = [item for item in filtered_queryset if item.is_process(settings.ref_process_value)]
+
+        print ('Time_process', (datetime.now() - start_time).total_seconds())
+
+        if settings.ref_day_value != None:
+            filtered_queryset = [item for item in filtered_queryset if item.is_date(settings.ref_day_value)]
+        # Tạo 100 màu
+        print ('Time_sort_start', (datetime.now() - start_time).total_seconds())
+
+        filtered_queryset = sorted(filtered_queryset, key=lambda obj: obj.code)
+
+        print ('Time_sort_end', (datetime.now() - start_time).total_seconds())
     
-    filtered_queryset = [obj for obj in ProductItem.objects.all() if len(obj.get_code()) > 3 ]
+        total_qty, total_vol, datelist = get_details_date_qty(filtered_queryset)
+    else:
+        itm = GlobalVars.objects.all().first()
+        total_qty = itm.total_qty
+        total_vol = itm.total_vol
+        datelist  = itm.datelist
 
-    # Dùng phương thức getter để lọc
-    
-    if code_value:
-        filtered_queryset = [item for item in filtered_queryset if any(code in item.get_code() for code in code_value)]
-
-    if name_value:
-        filtered_queryset = [item for item in filtered_queryset if any(name in item.name for name in name_value)]
-
-    if po_value:
-        filtered_queryset = [item for item in filtered_queryset if any(po in item.get_po() for po in po_value)]
-
-    if settings.ref_process_value:
-        filtered_queryset = [item for item in filtered_queryset if item.is_process(settings.ref_process_value)]
-
-    if settings.ref_day_value:
-        filtered_queryset = [item for item in filtered_queryset if item.is_date(settings.ref_day_value)]
-    # Tạo 100 màu
-    filtered_queryset = sorted(filtered_queryset, key=lambda obj: obj.get_code())
-    
-    total_qty, total_vol, datelist = get_details_date_qty(filtered_queryset)
+    print ('Time', (datetime.now() - start_time).total_seconds())
 
     dlist = [{'label':d} for d in settings.ref_day_value] if(settings.ref_day_value and len(settings.ref_day_value) > 0) else datelist
 
-    content = {'products': filtered_queryset[:10],
+    content = {'products': filtered_queryset,
 
                 'select_lists': {
                     'Process': default_process_list(),
                     'Day': datelist,
                     
                     'PO': build_po_list(),
-                    'Code': build_combo_list('get_code'),
-                    'Name': build_combo_list('get_name'),
+                    'Code': build_combo_list('code'),
+                    'Name': build_combo_list('name'),
                     
                 },
 
@@ -210,7 +178,7 @@ def product_list(request):
                 'TotalVol': [{'key':key, 'value':total_vol[key]} for key in total_vol],
             }
     
-    # print(content['select_lists']['Total'])
+    print ('Time_end', (datetime.now() - start_time).total_seconds())
     
     # Truyền dữ liệu vào context để sử dụng trong template
     return render(request, 'product_list.html', content)
@@ -276,12 +244,15 @@ def build_po_list(product = True):
 
     return res
 
-def build_combo_list(key, product = True):
+def build_combo_list(key):
     # ar = (sorted(set(ProductItem.objects.values_list(key, flat=True))) if product else sorted(set(DetailItem.objects.values_list(key, flat=True))))
-    if product:
-        values = [item.get_code() for item in ProductItem.objects.all()]
+    if key == 'code':
+        values = [item.code for item in ProductItem.objects.all()]
     else:
-        values = [item.get_code() for item in DetailItem.objects.all()]
+        values = [item.name for item in ProductItem.objects.all()]
+
+    for i in range(len(values)):
+        if values[i] == '-': values[i] = None
 
     # Loại bỏ giá trị trống hoặc None, sau đó lấy tập hợp và sắp xếp
     ar = sorted(set(filter(None, values)))
@@ -302,7 +273,7 @@ def receive_product_id(request):
             # Lấy dữ liệu JSON từ request body
             data = json.loads(request.body)
             product_id = data.get('productid', None)  # Lấy productid từ dữ liệu gửi đến
-            print('product_id',product_id)
+            # print('product_id',product_id)
             # print('ref_days', settings.ref_day_value)
 
             if not product_id:
@@ -310,7 +281,7 @@ def receive_product_id(request):
 
             # Tìm sản phẩm trong cơ sở dữ liệu
             try:
-                product = next(item for item in ProductItem.objects.all() if item.get_code() == product_id)
+                product = next(item for item in ProductItem.objects.all() if item.code == product_id)
                 # details = product.details.filter(name__isnull=False).order_by('name')
 
                 total_qty, total_vol, total_datelist = get_details_date_qty([product])

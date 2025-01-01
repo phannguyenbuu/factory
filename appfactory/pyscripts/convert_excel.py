@@ -5,6 +5,7 @@ import django
 import os
 import sys
 import json
+
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 
@@ -13,7 +14,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myfactory.settings")
 django.setup()
 
-from appfactory.models import DetailItem, ProductItem, DetailVolumeItem, ProductVolumeItem
+from django.conf import settings
+from appfactory.models import get_details_date_qty, GlobalVars, DetailItem, ProductItem, DetailVolumeItem, ProductVolumeItem
 
 # SHEET_TYPE_SP = ['HT','ĐBN','ĐONGGOI','DBN','DONGGOI']
 SELECTED_SHEETS = ['KE HOACH','PHÔI','PHOI','TINH','NHAM','LAPRAP','NGUOI','SON','UV','ĐBN','DBN','HT','ĐONGGOI','DONGGOI']
@@ -101,62 +103,92 @@ def generate_product_fr_details():
     ProductItem.objects.all().delete()
 
     for code in unique_product_codes:
-        try:
-            detail_items = DetailItem.objects.filter(code=code)
+        if len(code) > 3:
+            try:
+                detail_items = DetailItem.objects.filter(code=code)
 
-            product = ProductItem.objects.create()
-            product.details.add(*detail_items)
-            # __create_details_for_single_product(product)
+                product = ProductItem.objects.create()
+                product.details.add(*detail_items)
+                # __create_details_for_single_product(product)
 
-            product.save()
-        except Exception as e:
-            print('Error in', str(e))
+                product.save()
+            except Exception as e:
+                print('Error in', str(e))
 
-import sqlite3
+    print('Products', len(ProductItem.objects.all()))
 
-def reset_and_add_details(details):
-    # Giả sử 'details' là danh sách các đối tượng DetailItem, bạn sẽ lấy tất cả các 'id' từ các đối tượng này
-    detail_ids_to_keep = set(detail.id for detail in details)  # Lấy 'id' từ các đối tượng DetailItem
+    for product in ProductItem.objects.all():
+        product.updateData()
+        print(product.code)
+
+# import sqlite3
+
+# def reset_and_add_details(details):
+#     # Giả sử 'details' là danh sách các đối tượng DetailItem, bạn sẽ lấy tất cả các 'id' từ các đối tượng này
+#     detail_ids_to_keep = set(detail.id for detail in details)  # Lấy 'id' từ các đối tượng DetailItem
     
-    # Lấy tất cả các đối tượng DetailItem hiện tại trong cơ sở dữ liệu
-    current_detail_items = DetailItem.objects.all()
+#     # Lấy tất cả các đối tượng DetailItem hiện tại trong cơ sở dữ liệu
+#     current_detail_items = DetailItem.objects.all()
 
-    # Xóa các DetailItem không có trong 'details'
-    for item in current_detail_items:
-        if item.id not in detail_ids_to_keep:
-            item.delete()
+#     # Xóa các DetailItem không có trong 'details'
+#     for item in current_detail_items:
+#         if item.id not in detail_ids_to_keep:
+#             item.delete()
 
-    # Thêm lại các DetailItem từ 'details' vào cơ sở dữ liệu
-    for detail in details:
-        # Nếu DetailItem chưa có trong cơ sở dữ liệu, thêm mới
-        if not DetailItem.objects.filter(id=detail.id).exists():
-            DetailItem.objects.create(**detail)
+#     # Thêm lại các DetailItem từ 'details' vào cơ sở dữ liệu
+#     for detail in details:
+#         # Nếu DetailItem chưa có trong cơ sở dữ liệu, thêm mới
+#         if not DetailItem.objects.filter(id=detail.id).exists():
+#             DetailItem.objects.create(**detail)
     
-    print("DetailItems have been reset and added again, while keeping those in 'details'.")
+#     print("DetailItems have been reset and added again, while keeping those in 'details'.")
 
-def decrease_dblite(table_key, num_rows):
-    products = ProductItem.objects.all()
+# def decrease_dblite(table_key, num_rows):
+#     products = ProductItem.objects.all()
     
-    count = 0
-    res = set()
+#     count = 0
+#     res = set()
 
-    for product in products:
-        details = product.details.all()
+#     for product in products:
+#         details = product.details.all()
 
-        if len(details) > 0:
-            res.update(details)
-            count += 1
+#         if len(details) > 0:
+#             res.update(details)
+#             count += 1
 
-            if count > 10: break
+#             if count > 10: break
 
     
-    reset_and_add_details(res)
-    generate_product_fr_details()
+#     reset_and_add_details(res)
+#     generate_product_fr_details()
     
 
     
 
 
 if __name__ == "__main__":
-    decrease_dblite('appfactory_detailitem', 250)
+    # decrease_dblite('appfactory_detailitem', 250)
     # generate_product_fr_details()
+
+    # print(len(ProductItem.objects.all()))
+
+    # for product in ProductItem.objects.all():
+        
+    #     product.updateData()
+    #     print(product.code)
+
+    # generate_product_fr_details()
+
+    GlobalVars.objects.all().delete()
+    total_qty, total_vol, datelist = get_details_date_qty(ProductItem.objects.all())
+
+    globalvar = GlobalVars.objects.create(
+        total_qty = total_qty, 
+        total_vol = total_vol, 
+        datelist = datelist
+    )
+
+    
+
+
+    # print(settings.total_qty, settings.total_vol, settings.datelist)

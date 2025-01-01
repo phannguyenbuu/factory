@@ -1,4 +1,6 @@
 <script>
+
+
     document.addEventListener("DOMContentLoaded", () => {
         // Lấy URL hiện tại
         const url = new URL(window.location.href);
@@ -57,6 +59,14 @@
                     console.log('Dữ liệu từ server:', data);
                     //if (data.status === 'success') {
                     document.getElementById('detail-obj').innerHTML = data.html;
+
+                    document.querySelector("#xnt_detail_table").querySelectorAll("tbody tr").forEach(row => {
+                        row.addEventListener("click", () => {
+                            const id = row.children[1].textContent;
+                            window.open(window.location.href.replace('xnt','content') + `?code=${id}&process=DONGGOI`); // Chuyển hướng tới URL mới
+
+                        });
+                    });
                     //}
                 })
                 .catch(error => {

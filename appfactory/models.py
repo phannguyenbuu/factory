@@ -6,6 +6,58 @@ from django.conf import settings
 SHEET_TYPE_SP = ['KE HOACH','ĐBN','ĐONGGOI','DBN','DONGGOI']
 
 
+def get_date_list(details):
+    # res = []
+    unique_days_months = (details.values('day', 'month').distinct().order_by('month', 'day'))
+        
+    # for item in unique_days_months:
+    #     res += [(f"{item['day']}-{item['month']}")]
+
+    return [{'label': (f"{item['day']}-{item['month']}")} for item in unique_days_months]
+
+def total_process_by_date(selected_products, day_str):
+    day, month = day_str.split('-')
+    day = int(day)
+    month = int(month)
+
+    date_items = [date for item in selected_products for date in item.get_date().all()]
+
+    process_list = set()
+    for itm in date_items:
+        process_list.add(itm.process)
+
+    # print('date_items', len(date_items), len(process_list))
+    
+    res_qty = {}
+    res_vol = {}
+
+    for process in process_list:
+        if (not getattr(settings, 'ref_process_value', None)) or (process in settings.ref_process_value):
+            filter_date_items = [itm for itm in date_items if itm.day == day and itm.month == month and itm.process == process]
+            # print(day,month,len(filter_date_items))
+            res_qty[process] = sum(itm.qty for itm in filter_date_items)
+            res_vol[process] = sum(itm.volume for itm in filter_date_items)
+    
+    return res_qty.items(), res_vol.items()
+
+def get_details_date_qty(product_query_set):
+    datelist = get_date_list(DateItem.objects.filter(qty__gt=0))
+
+    total_qty = {}
+    total_vol = {}
+
+    for itm in datelist:
+        day = itm['label']
+        ls1, ls2 = total_process_by_date(product_query_set, day)
+        
+        v = sum_qty_to_json(ls1)
+
+        if v != '':
+            total_qty[day] =  v
+            total_vol[day] =  sum_qty_to_json(ls2, False)
+
+    return total_qty, total_vol, datelist
+
 def sum_qty_to_json(ls, is_qty = True):
     res = []
 
@@ -22,21 +74,28 @@ class DateItem(models.Model):
     year = models.IntegerField(default=0)
 
     process = models.CharField(max_length=50, default='')
-    volume = models.DecimalField(max_digits=20, decimal_places=6, default=0.0)
+    volume = models.FloatField(default=0.0)
     qty = models.IntegerField(default=0)
 
     content = models.CharField(max_length=255, default='')
 
 class ProductVolumeItem(models.Model):
-    product_volume = models.DecimalField(max_digits=20, decimal_places=6, default=0.0)
-    all_product_volume = models.DecimalField(max_digits=20, decimal_places=6, default=0.0)
+    product_volume = models.FloatField(default=0.0)
+    all_product_volume = models.FloatField(default=0.0)
     all_product_qty = models.IntegerField(default=0)
+
+    def to_dict(self):
+        return {
+            "product_volume": self.product_volume,
+            "all_product_volume": self.all_product_volume,
+            "all_product_qty": self.all_product_qty,
+        }
 
 class DetailVolumeItem(models.Model):
     all_this_items_qty_per_product = models.IntegerField(default=0)
     all_this_items_qty = models.IntegerField(default=0)
 
-    this_item_volume = models.DecimalField(max_digits=10, decimal_places=6, default=0.0)
+    this_item_volume = models.FloatField(default=0.0)
 
     def get_all_this_items_volume_per_product(self):
         return self.qty_per_product * self.volume_per_item
@@ -136,12 +195,40 @@ from django.db.models import Sum
 class ProductItem(models.Model):
     detail_count = models.IntegerField(default=0)
     code = models.CharField(max_length=255, default='', null=True)
-    # name = models.CharField(max_length=255, default='', null=True)
-    # po = models.CharField(max_length=255, default='', null=True)
-    # qty = models.IntegerField(default=0)
+    name = models.CharField(max_length=255, default='', null=True)
+    po = models.CharField(max_length=255, default='', null=True)
+    qty = models.IntegerField(default=0)
+    volume =  models.JSONField(default=dict)  # Lưu trữ JSON
 
+    summary_qty_by_qty = models.JSONField(default=dict)  # Lưu trữ JSON
+    summary_qty_by_vol = models.JSONField(default=dict)  # Lưu trữ JSON
+
+    process = models.CharField(max_length=50, default='')
     details = models.ManyToManyField(DetailItem)
-    
+
+    def updateData(self):
+        self.code = self.get_code()
+        self.po = self.get_po()
+        self.name = self.get_name()
+        self.date = self.get_date()
+        
+        self.volume = self.get_volume()
+        self.process = self.get_process()
+
+        self.summary_qty_by_qty = self.get_summary_qty_by_(True)
+
+        
+
+        self.summary_qty_by_vol = self.get_summary_qty_by_(False)
+        
+        self.save()
+
+        # print('[1]', self.summary_qty_by_qty)
+        # print('[2]', self.get_summary_qty_by_(True))
+
+        # print('[3]', self.summary_qty_by_vol)
+        # print('[4]', self.get_summary_qty_by_(False))
+        
     def get_code(self):
         itm = self.details.first()
         return itm.code if itm else None
@@ -158,11 +245,12 @@ class ProductItem(models.Model):
         return DateItem.objects.filter(detailitem__in=self.details.all()).distinct()
 
     def get_volume(self):
-        return self.details.filter(product_volume__isnull=False).first().product_volume
+        return self.details.filter(product_volume__isnull=False).first().product_volume.to_dict()
 
     def get_process(self):
-        all_dates = self.get_date()
-        return [itm.process for itm in all_dates].distinct()
+        all_dates = self.get_date().distinct()
+        # print('all_date', all_dates)
+        return [itm.process for itm in all_dates]
     
     def sum_qty_by_dd_mm_process(self, day, month, is_qty = True):
         # Lọc DateItem theo ngày và tháng
@@ -424,26 +512,10 @@ class ShipQtyByContainerRelation(models.Model):
     def Print(self):
         print(f'{self.detail.code} - {self.detail.name} - {self.contifor.name} - {self.value}')
 
-class ShipInfor(models.Model):  
-    containerName = models.CharField(max_length=50, default='', null=True) # TÊN CONT
-    code = models.CharField(max_length=50, default='', null=True) # MÃ SP
-    name = models.CharField(max_length=50, default='', null=True) # TÊN SP
-    sheetname = models.CharField(max_length=50, default='', null=True) # TÊN CỘT
-
-    poEtd = models.ManyToManyField(DateItem, related_name='poetd_shipcaneditinfor')
-
-    
-
-    poContent = models.CharField(max_length=50, default='', null=True)
-    poName = models.CharField(max_length=50, default='', null=True)
-
-    clientName = models.CharField(max_length=50, default='', null=True) # TÊN KHÁCH HÀNG
-    status = models.CharField(max_length=50, default='', null=True) # TRẠNG THÁI SHIP
-
-    qty = models.IntegerField(default=0)
-    qtyProcess = models.OneToOneField(QtyProcess, on_delete=models.CASCADE, null=True, blank=True)
-
-
+class GlobalVars(models.Model):  
+    total_qty =  models.JSONField(default=dict)  # Lưu trữ JSON
+    total_vol =  models.JSONField(default=dict)  # Lưu trữ JSON
+    datelist =  models.JSONField(default=dict)  # Lưu trữ JSON
     
 
 
@@ -458,18 +530,22 @@ class ShipInfor(models.Model):
 
 # scp -r myfactory.zip root@145.223.23.137:factory/myfactory.zip
 # scp -r appfactory/templates/product_list.html root@145.223.23.137:factory/appfactory/templates/product_list.html
-# rm -r appfactory
+# rm -r media
 # mkdir /factory/appfactory
 # scp -r db.sqlite3 root@145.223.23.137:factory
 # scp -r appfactory root@145.223.23.137:factory/appfactory/
-# scp -r ./appfactory/templates/ root@145.223.23.137:factory/appfactory/templates/
-# scp -r ./appfactory root@145.223.23.137:factory/appfactory/
+# scp -r ./appfactory/templates/ root@145.223.23.137:factory/appfactory/
+
+
+    
 # scp -r ./requirements.txt root@145.223.23.137:/factory/
 # scp -r ./newrequire.txt root@145.223.23.137:/factory/
 # scp -r ./appfactory/views.py root@145.223.23.137:factory/appfactory/views.py
 # ssh root@145.223.23.137
 # scp -r ./ root@145.223.23.137:factory
+
 # scp -r ./appfactory root@145.223.23.137:factory/
+
 # scp -r ./db.sqlite3 root@145.223.23.137:factory/db.sqlite3
 # python manage.py runserver 0.0.0.0:8000
 # scp -r root@145.223.23.137:factory/media ./media

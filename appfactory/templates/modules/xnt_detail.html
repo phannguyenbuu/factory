@@ -2,7 +2,7 @@
 <p>PO / CONT: {{ id }} / {{ contnumber }}</p>
 
 {% if details %}
-    <table class="detail-table table-striped">
+    <table id = "xnt_detail_table" class="detail-table table-striped">
         <thead>
             <tr>
                 <th>No</th>
@@ -43,4 +43,6 @@
 {% else %}
     <i>No detail item found</i>
 {% endif %}
+
+
 

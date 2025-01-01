@@ -47,6 +47,14 @@
             width: 50px; /* Đặt độ rộng cho cột thứ hai */
             text-align: center;
         }
+
+        .small-title-table-content {
+            color:#fff;
+            font-size: 12px;
+            font-style: italic;
+            
+            text-align: center;
+        }
     </style>
     
 </head>
@@ -90,22 +98,22 @@
                     {% for product in products %}
                         <tr>
                             <td>{{ forloop.counter }} </td>
-                            <td>{{ product.get_code }}</td>
+                            <td>{{ product.code }}</td>
                             <td>
-                                <p>{{ product.get_name }}</p>
+                                <p>{{ product.name }}</p>
 
                                 {% for item in select_lists.PO %}
-                                    {% if item.label == product.get_po %}
-                                        <p class="po-note" style = 'background-color:  {{ item.color }};'>{{ product.get_po|replace:'Kế hoạch Tháng,' }}</p>
+                                    {% if item.label == product.po %}
+                                        <p class="po-note small-title-table-content" style = 'background-color:  {{ item.color }};'>{{ product.get_po|replace:'Kế hoạch Tháng,' }}</p>
                                     {% endif %}
                                 {% endfor %}
                             </td>
                             <td class="counter">
-                                {{ product.get_volume.all_product_qty }}
+                                {{ product.volume.all_product_qty }}
                             </td>
 
                             <td class="volume">
-                                {{ product.get_volume.all_product_volume }}
+                                {{ product.volume.all_product_volume }}
                             </td>
                             
                             {% for day in FilterDay %}
