@@ -1,5 +1,48 @@
 {% load custom_filters %}
 
+
+<style>
+    .process-bk-color-PHÔI {
+        color: #ff0000;
+    }
+
+    .process-bk-color-TINH {
+        color: #8a1fc7;
+    }
+
+    .process-bk-color-NGUOI {
+        color: #ff5b6f;
+    }
+
+    .process-bk-color-HT {
+        color: #038bd5;
+    }
+
+    .process-bk-color-LAPRAP {
+        color: #00a846;
+    }
+
+    .process-bk-color-NHAM {
+        color: #ee9805;
+    }
+
+    .process-bk-color-SON {
+        color: #2d6adf;
+    }
+
+    .process-bk-color-UV {
+        color: #ffb748;
+    }
+
+    .process-bk-color-ĐBN {
+        color: #555555;
+    }
+
+    .process-bk-color-DONGGOI {
+        color: #555555;
+    }
+</style>
+
 <div class="sidebar" id ="sidebar-obj">
     <div id="first-filter-group">
         <label id="label-{{ label|slugify }}">LIST: {{ products|length }}  items</label>
@@ -14,16 +57,16 @@
 
             <div class="filter-group" id ="filter-group-{{ label|slugify }}">
                 {% for key in item_list %}
-                    {% with title_1=key.label|replace:'",' %}
+                    {% with title_1=key|replace:'",' %}
                         {% with title=title_1|replace:'Kế hoạch Tháng ,' %}
                             <div class="list-item">
                                 <input type="checkbox" id="{{ label|slugify }}-{{ title|slugify }}" 
                                     name="{{ label|slugify }}" value='{{ title }}'  class="checkbox-input-{{ label|slugify }}">
-                                <label for="{{ label|slugify }}-{{ title|slugify }}"  class="checkbox-label-{{ label|slugify }}" title='{{ title }}'>
+                                <label for="{{ label|slugify }}-{{ title|slugify }}"  class="checkbox-label-{{ label|slugify }}  process-bk-color-{{ key }}" title='{{ title }}'>
                                     {% if label == "Process" %}
-                                        <i class="fas fa-{{ key.icon }}" style="color: {{ key.color }};"></i>&nbsp;&nbsp;{{ title }}
+                                        <i class="fas fa-{{ key.icon }}"></i>&nbsp;&nbsp;{{ title }}
                                     {% elif label == "PO" %}
-                                        <p style="background-color: {{ key.color }};">{{ title }}</p>
+                                        <p>{{ title }}</p>
                                     {% else %}
                                         {% if title|length > 30 %}
                                             {{ title|slice:":25" }}...  <!-- Rút gọn còn 50 ký tự -->

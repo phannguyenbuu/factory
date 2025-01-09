@@ -9,7 +9,9 @@
                 <th>Code</th>
                 <th>Name</th>
                 
-                <th>Qty</th>
+                
+                <th>SLG ĐẶT HÀNG</th>
+                <th>SLG</th>
                 <th>Input</th>
                 <th>Output</th>
                                 
@@ -17,7 +19,7 @@
                 <th>StockVol</th>
 
                 <th>Date</th>
-                <th>Note</th>
+                <th>In Conts</th>
             </tr>
         </thead>
         <tbody>
@@ -26,7 +28,10 @@
                     <td>{{ forloop.counter }}</td>
                     <td>{{ itm.code }}</td>
                     <td>{{ itm.name }}</td>
+                    
+                    
 
+                    <td><b>{{ itm.qty_require }}</b></td>
                     <td><b>{{ itm.qty }}</b></td>
                     <td>{{ itm.input }}</td>
                     <td>{{ itm.output }}</td>
@@ -35,7 +40,16 @@
                     <td>{{ itm.instockVolume|floatformat:6 }}</td>
 
                     <td>{{ itm.documentDate }}</td>
-                    <td>{{ itm.note|default:"--" }}</td>
+
+                    <td>
+                        {% if itm.inconts %}
+                        <div class="round-border">
+                            {% for k, v in itm.inconts.items %}
+                                <p>{{ k }}: {{ v }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </td>
                 </tr>
             {% endfor %}
         </tbody>

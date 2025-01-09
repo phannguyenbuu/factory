@@ -2,7 +2,7 @@
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.shortcuts import render
-from appfactory.models import GlobalVars,ProductItem, DetailItem, DateItem, get_details_date_qty, sum_qty_to_json, SHEET_TYPE_SP, ShipDetailItem, ShipQtyByContainerRelation, ContInfor
+from appfactory.models import default_process_list, GlobalVars,ProductItem, DetailItem, DateItem, SHEET_TYPE_SP, ShipDetailItem, ShipQtyByContainerRelation, ContInfor
 from django.db.models import Q
 import json
 from datetime import datetime
@@ -12,6 +12,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.core.files.storage import FileSystemStorage
 from appfactory.pyscripts.convert_excel import generate_details_data, generate_product_fr_details
+from appfactory.pyscripts.read_ship_excel import _read_all_ship_excel
 
 # views.py
 from django.http import JsonResponse
@@ -19,43 +20,64 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db.models import F
 from django.db.models.functions import Length
 from django.db.models import Sum
-
-
+from datetime import date
+from django.db.models import F, OuterRef, Subquery
 
 def process_files(request):
     if request.method == 'POST' and request.FILES:
         file_paths = []
 
         # delete_all_contents(settings.MEDIA_ROOT)
-        
+        file_input_type = 0
         # Lưu file lên server
         for file in request.FILES.values():
+            
+                
             fs = FileSystemStorage()
             filename = fs.save(file.name, file)
+
+            if filename.startswith('QUANLYSANXUAT'):
+                file_input_type = 1
+
             file_paths.append(os.path.join(settings.MEDIA_ROOT, filename))
         
         # Gọi hàm xử lý dữ liệu sau khi lưu file
         try:
             start_time = datetime.now()
-            DetailItem.objects.all().delete()
-
             msg = '?'
-            # print('Step 1:', file_paths)  # In ra các đường dẫn file đã lưu
-            worksheets = []
 
-            for index, file_path in enumerate(file_paths):
-                msg += ('&' if index > 0 else '') + f'file_{index}=' + os.path.splitext(os.path.basename(file_path))[0] + ":"
-                print('File',index,'/',len(file_paths),':',file_path)
-                # Gọi hàm xử lý dữ liệu với đường dẫn đến file
-                worksheets = generate_details_data(file_path)
-                msg += '_'.join(worksheets)
+            if file_input_type == 1: #PRODUCT LIST
+                DetailItem.objects.all().delete()
 
-            generate_product_fr_details()
+                worksheets = []
+
+                for index, file_path in enumerate(file_paths):
+                    msg += ('&' if index > 0 else '') + f'file_{index}=' + os.path.splitext(os.path.basename(file_path))[0] + ":"
+                    print('File',index,'/',len(file_paths),':',file_path)
+                    # Gọi hàm xử lý dữ liệu với đường dẫn đến file
+                    worksheets = generate_details_data(file_path)
+                    msg += '_'.join(worksheets)
+
+                generate_product_fr_details()
+
+                msg += f'&detail={DetailItem.objects.all().count()}&product={ProductItem.objects.all().count()}'
+            else:
+                _read_all_ship_excel(file_paths)
+
+                msg += f'&product={ContInfor.objects.all().count()}&detail={ShipDetailItem.objects.all().count()}'
 
             end_time = datetime.now()
-            print(f"Thời gian thực thi của hàm: {end_time - start_time}")
+            duration = end_time - start_time
 
-            msg += f'&detail={DetailItem.objects.all().count()}&product={ProductItem.objects.all().count()}&time={end_time - start_time}'
+            total_seconds = int(duration.total_seconds())
+
+            # Tách phút và giây
+            minutes = total_seconds // 60
+            seconds = total_seconds % 60
+            
+            print(f"Thời gian thực thi của hàm: {duration}")
+
+            msg += f'&time={minutes:02}:{seconds:02}'
 
             return JsonResponse({
                 'success': True,
@@ -112,15 +134,18 @@ def product_list(request):
     name_value = __get_array_vals(request, 'name')
     po_value = __get_array_vals(request, 'po')
 
-    settings.ref_day_value = __get_array_vals(request, 'day')
-    settings.ref_process_value = __get_array_vals(request, 'process')
+    GlobalVars.set_value('FILTER_DAYS', __get_array_vals(request, 'day'))
+    GlobalVars.set_value('FILTER_PROCESS', __get_array_vals(request, 'process'))
 
-    print("Code:", code_value,"Name:", name_value,"Day:", settings.ref_day_value,"PO:", po_value,"Process:", settings.ref_process_value)
+    _global_days = GlobalVars.get_value('FILTER_DAYS')
+    _global_process = GlobalVars.get_value('FILTER_PROCESS')
+
+    print("Code:", code_value,"Name:", name_value,"Day:", _global_days,"PO:", po_value,"Process:", _global_process)
     print ('Time', (datetime.now() - start_time).total_seconds())
 
     filtered_queryset = ProductItem.objects.all()
 
-    if any(s != None for s in [code_value, name_value, po_value, settings.ref_process_value, settings.ref_day_value]):
+    if any(s != None for s in [code_value, name_value, po_value, _global_process, _global_days]):
         if code_value != None:
             filtered_queryset = [item for item in filtered_queryset if any(code in item.code for code in code_value)]
 
@@ -136,13 +161,13 @@ def product_list(request):
 
         print ('Time_po', (datetime.now() - start_time).total_seconds())
 
-        if settings.ref_process_value != None:
-            filtered_queryset = [item for item in filtered_queryset if item.is_process(settings.ref_process_value)]
+        if _global_process != None:
+            filtered_queryset = [item for item in filtered_queryset if item.is_process(_global_process)]
 
         print ('Time_process', (datetime.now() - start_time).total_seconds())
 
-        if settings.ref_day_value != None:
-            filtered_queryset = [item for item in filtered_queryset if item.is_date(settings.ref_day_value)]
+        if _global_days != None:
+            filtered_queryset = [item for item in filtered_queryset if item.is_date(_global_days)]
         # Tạo 100 màu
         print ('Time_sort_start', (datetime.now() - start_time).total_seconds())
 
@@ -150,64 +175,52 @@ def product_list(request):
 
         print ('Time_sort_end', (datetime.now() - start_time).total_seconds())
     
-        total_qty, total_vol, datelist = get_details_date_qty(filtered_queryset)
+        GlobalVars.setAllTotals(filtered_queryset, False)
     else:
-        itm = GlobalVars.objects.all().first()
-        total_qty = itm.total_qty
-        total_vol = itm.total_vol
-        datelist  = itm.datelist
+        GlobalVars.set_default()
 
-    print ('Time', (datetime.now() - start_time).total_seconds())
+    print ('Time_end_dlist', (datetime.now() - start_time).total_seconds())
 
-    dlist = [{'label':d} for d in settings.ref_day_value] if(settings.ref_day_value and len(settings.ref_day_value) > 0) else datelist
+    # for product in filtered_queryset:
+    #     print('total_qty', product.summary_qty_by_qty)
 
     content = {'products': filtered_queryset,
 
                 'select_lists': {
-                    'Process': default_process_list(),
-                    'Day': datelist,
+                    'Process': default_process_list,
+                    'Day': GlobalVars.get_value('ALL_TOTAL_DATE'),
                     
-                    'PO': build_po_list(),
-                    'Code': build_combo_list('code'),
-                    'Name': build_combo_list('name'),
-                    
+                    'PO': sorted(build_po_list()),
+                    'Code': sorted(build_combo_list('code')),
+                    'Name': sorted(build_combo_list('name')),
                 },
 
-                'FilterDay': dlist,
-                'TotalQty': [{'key':key, 'value':total_qty[key]} for key in total_qty],
-                'TotalVol': [{'key':key, 'value':total_vol[key]} for key in total_vol],
+                'FilterDay': GlobalVars.allValidDays(),
+                'TotalQty': GlobalVars.get_value('TOTAL_QTY'),
+                'TotalVol': GlobalVars.get_value('TOTAL_VOL'),
             }
-    
+    # print('content',content['select_lists'])
     print ('Time_end', (datetime.now() - start_time).total_seconds())
     
     # Truyền dữ liệu vào context để sử dụng trong template
     return render(request, 'product_list.html', content)
 
 def xnt(request):
+    sorted_queryset = ContInfor.objects.all()
+    # sorted_queryset = ContInfor.objects.filter(etd__year__gte=2024,  # Năm lớn hơn 2024
+    #     etd__month__gte=5,   # Tháng lớn hơn hoặc bằng 1
+    #     etd__day__gte=1      # Ngày lớn hơn hoặc bằng 1
+    # )
     
-    content = { 'containers': ContInfor.objects.all().order_by('clientname', 'name'),
+    content = { 'containers': sorted_queryset.order_by('sort_order'),
                'shipdetails': ShipDetailItem.objects.all(),
                'shiprelations': ShipQtyByContainerRelation.objects.all(),
-
             }
     
     # print(content['select_lists']['Total'])
     
     # Truyền dữ liệu vào context để sử dụng trong template
     return render(request, 'xnt.html', content)
-
-
-def default_process_list():
-    return [{'color':'#ff0000','label':'PHÔI', 'icon':'p'},
-            {'color':'#8a1fc7','label':'TINH',  'icon':'t'},
-            {'color':'#ff5b6f','label':'NGUOI',  'icon':'i'},
-            {'color':'#038bd5','label': 'HT', 'icon': 'h'},
-            {'color':'#00a846','label': 'LAPRAP', 'icon': 'l'},
-            {'color':'#ee9805','label': 'NHAM', 'icon':'n'},
-            {'color':'#2d6adf','label': 'SON', 'icon': 's'},
-            {'color':'#ffb748','label': 'UV', 'icon': 'u' },
-            {'color':'#555555','label': 'ĐBN','icon': 'd'},
-            {'color':'#3cb8ff','label': 'DONGGOI','icon': 'g'}]
 
 def success_upload(request):
     # Lấy các tham số từ URL query
@@ -234,16 +247,8 @@ def success_upload(request):
     })
 
 def build_po_list(product = True):
-    ar = (sorted(set(DetailItem.objects.values_list('po', flat=True))) if product else sorted(set(DetailItem.objects.values_list(key, flat=True))))
-    res = [{'label': s} for s in ar]
-
-    distinct_colors = generate_colors(len(res))
-
-    for index, itm in enumerate(res):
-        itm['color'] = distinct_colors[index]
-
-    return res
-
+    return (sorted(set(DetailItem.objects.values_list('po', flat=True))) if product else sorted(set(DetailItem.objects.values_list(key, flat=True))))
+    
 def build_combo_list(key):
     # ar = (sorted(set(ProductItem.objects.values_list(key, flat=True))) if product else sorted(set(DetailItem.objects.values_list(key, flat=True))))
     if key == 'code':
@@ -255,16 +260,7 @@ def build_combo_list(key):
         if values[i] == '-': values[i] = None
 
     # Loại bỏ giá trị trống hoặc None, sau đó lấy tập hợp và sắp xếp
-    ar = sorted(set(filter(None, values)))
-
-    res = [{'label': s} for s in ar]
-
-    distinct_colors = generate_colors(len(res))
-
-    for index, itm in enumerate(res):
-        itm['color'] = distinct_colors[index]
-
-    return res
+    return sorted(set(filter(None, values)))
 
 @csrf_exempt  # Tạm thời bỏ qua kiểm tra CSRF (chỉ cho việc phát triển, không nên dùng trong môi trường sản xuất)
 def receive_product_id(request):
@@ -274,7 +270,7 @@ def receive_product_id(request):
             data = json.loads(request.body)
             product_id = data.get('productid', None)  # Lấy productid từ dữ liệu gửi đến
             # print('product_id',product_id)
-            # print('ref_days', settings.ref_day_value)
+            # print('ref_days', GlobalVars.get_value('REF_DAY')
 
             if not product_id:
                 return JsonResponse({'status': 'error', 'message': 'Product ID not provided'}, status=400)
@@ -284,7 +280,7 @@ def receive_product_id(request):
                 product = next(item for item in ProductItem.objects.all() if item.code == product_id)
                 # details = product.details.filter(name__isnull=False).order_by('name')
 
-                total_qty, total_vol, total_datelist = get_details_date_qty([product])
+                total_qty, total_vol, total_datelist = ProductItem.get_details_date_qty([product])
 
                 res = []
 
@@ -293,7 +289,7 @@ def receive_product_id(request):
                         ls = []
                         for dt in detail.date.all():
                             # print(dt.process)
-                            if ((not settings.ref_day_value) or (f'{dt.day}-{dt.month}' in settings.ref_day_value)) and ((not settings.ref_process_value) or (dt.process in settings.ref_process_value)):
+                            if GlobalVars.isValidFilterDay and GlobalVars.isValidFilterProcess:
                                 ls += [dt]
                         
                         if len(ls) > 0:
@@ -314,9 +310,9 @@ def receive_product_id(request):
                     'details': res,
                     'total_qty': list(total_qty.values()), 
                     'total_vol': list(total_vol.values()),  
-                    'total_datelist': [itm['label'] for itm in total_datelist if itm['label'] in total_qty],
-                    'selected_dates': settings.ref_day_value or [],
-                    'selected_processes': settings.ref_process_value or [],
+                    'total_datelist': [itm for itm in total_datelist if itm in total_qty],
+                    'selected_dates': GlobalVars.get_value('FILTER_DAYS') or [],
+                    'selected_processes': GlobalVars.filterProcess() or [],
                 }
 
                 
@@ -390,7 +386,7 @@ def xnt_receive_product_id(request):
 
             print('product_data', data, id, contNumber, client)
             # print('product_id', product_id)
-            # print('ref_days', settings.ref_day_value)
+            # print('ref_days', GlobalVars.get_value('REF_DAY')
 
             if not id and not contNumber and not client:
                 return JsonResponse({'status': 'error', 'message': 'Product ID not provided'}, status=400)
@@ -410,14 +406,45 @@ def xnt_receive_product_id(request):
 
                 for itm in details:
                     relate_items = ShipQtyByContainerRelation.objects.filter(detail_id=itm.id,contifor_id=contObj.id)
+                    
+                    relate_conts_items = ShipQtyByContainerRelation.objects.filter(detail_id=itm.id)
+                    
+                    relate_conts_items = sorted(
+                        relate_conts_items, 
+                        key=lambda item: item.contifor.by_sort_date(),  # Sử dụng by_sort_date() làm key
+                        reverse=True  # Sắp xếp theo thứ tự giảm dần
+                    )
 
+                    __inconts = {}
                     __total = 0
-
                     for __itm in relate_items: __total += __itm.value
+
+                    __total_in_this = itm.instock
+                    __check__total_in_this = True
+                    
+                    for __itm in relate_conts_items:
+                        if not __itm.contifor.is_ship():
+                            __name = __itm.contifor.name
+
+                            if __name == None:
+                                __name = __itm.contifor.poNumber
+
+                            __date = __itm.contifor.by_sort_date()
+                            __name +=  f'({__date.strftime("%d-%m-%y")})'
+
+                            __inconts[__name] = __itm.value
+
+                            if __check__total_in_this: __total_in_this -= __itm.value
+                            if __itm.contifor.id == __itm != contObj.id: __check__total_in_this = False
+
+                    if __total_in_this < 0: __total_in_this = 0
+                    if __total_in_this > __total: __total_in_this = __total
 
                     res += [{'code':itm.code, 
                              'name':itm.name,
-                             'qty':__total,
+                             'inconts': __inconts,
+                             'qty_require':__total,
+                             'qty':__total_in_this,
                              'input':itm.input,
                              'output':itm.output,
                              'note':itm.note,

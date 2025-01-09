@@ -1,8 +1,6 @@
 <h3>{{ id }}</h3>
 <p>{{ name }}</p>
 
-
-
 {% if details %}
     <table class="table-striped">
         <thead>
@@ -59,7 +57,7 @@
                     <td>
                         <div class="round-border">
                             {% for dt in itm.date %}
-                                {{ dt.day }}-{{ dt.month }}/{{ dt.process }}:{{ dt.volume }}<br>
+                                {{ dt.day }}-{{ dt.month }}/{{ dt.process }}:{{ dt.volume|floatformat:6 }}<br>
                             {% endfor %}
                         </div>
                     </td>

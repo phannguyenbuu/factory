@@ -1,11 +1,9 @@
 {% load custom_filters %}
 
 <td class="{{ type }}" id="{{ day.label }}-{{ type }}">
-    {% for itm in datalist %}
-        {% if itm.key == day.label and itm.value %}
-            <div class="round-border">
-                {{ itm.value|safe }}
-            </div>
+    {% for key, value in datalist.items %}
+        {% if key == day and value %}
+            <div class="round-border">{{ value|safe }}</div>
         {% endif %}
     {% endfor %}
 </td>

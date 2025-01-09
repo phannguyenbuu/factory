@@ -158,6 +158,3 @@ CHANNEL_LAYERS = {
 ASGI_APPLICATION = 'myfactory.asgi.application'
 
 # scp myfactory/settings.py root@145.223.23.137:factory/myfactory/settings.py
-
-ref_process_value = None
-ref_day_value = None

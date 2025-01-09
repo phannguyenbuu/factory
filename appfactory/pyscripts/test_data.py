@@ -16,7 +16,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myfactory.settings")
 django.setup()
 
-from appfactory.models import DateItem, DetailItem, ProductItem
+from appfactory.models import DetailItem, DateItem,ShipQtyByContainerRelation, ProductItem, \
+    DetailVolumeItem, ProductVolumeItem, DateCanEdit, ShipDetailItem, ContInfor
 
 def test_data():
     # code = 'T929'
@@ -63,5 +64,22 @@ def test_data():
             # for itm in product.get_summary_qty_by_process():
             #     print(itm['key'],'******',itm['value'])
             # print(len(product.get_summary_volume_by_process()))
-            
-test_data()
+
+def delete_item():
+    results = ContInfor.objects.filter(poNumber__icontains='TEST')
+    print(results)
+
+    for itm in results:
+        itm.delete()
+
+if __name__ == "__main__":
+    print(len(ContInfor.objects.all()), len(ShipDetailItem.objects.all()))
+    # for itm in ContInfor.objects.all():
+    #     # print (itm.name, itm.poNumber)
+    #     d = itm.etd.all()[0]
+
+    #     for index, gr in enumerate([itm.psi, itm.cyCut, itm.siCut, itm.shipRun]):
+    #         gr.all().delete()
+    #         gr.add(d.add(index + 1))
+        
+    #     # print(itm.etd.all()[0], itm.psi.all()[0], itm.cyCut.all()[0], itm.siCut.all()[0], itm.shipRun.all()[0])

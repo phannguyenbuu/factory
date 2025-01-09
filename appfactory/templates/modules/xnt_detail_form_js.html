@@ -63,7 +63,7 @@
                     document.querySelector("#xnt_detail_table").querySelectorAll("tbody tr").forEach(row => {
                         row.addEventListener("click", () => {
                             const id = row.children[1].textContent;
-                            window.open(window.location.href.replace('xnt','content') + `?code=${id}&process=DONGGOI`); // Chuyển hướng tới URL mới
+                            window.open(window.location.href.replace('xnt','content') + `?code=${id}`); // Chuyển hướng tới URL mới
 
                         });
                     });

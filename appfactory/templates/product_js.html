@@ -132,7 +132,7 @@
     }
 
     // Hàm để tách chuỗi thành object
-    function parseToObject(input, filter_days = undefined) {
+    function parseToObject(input, filterDays = undefined) {
         input = input.startsWith("{") ? input.slice(1, -1) : input;
         input = input.endsWith("}") ? input.slice(0, -1) : input;
         input = input.replace(/ /g,'').replace(/'/g,'')
@@ -170,7 +170,7 @@
                     {
                         const arr = key.split('-');
                         
-                        if(filter_days && !filter_days.includes(key))
+                        if(filterDays && !filterDays.includes(key))
                             key = undefined;
                     }
 
@@ -178,7 +178,7 @@
 
                     if(key)
                     {
-                        // console.log('filter', filter_days, key);
+                        // console.log('filter', filterDays, key);
                         const value = parseInt(match[1]); // Giá trị (30, 60, 120...)
 
                         // Kiểm tra xem key đã tồn tại trong result chưa, nếu có thì cộng thêm giá trị
@@ -197,10 +197,10 @@
         return result;
     }
 
-    function __group_same_value(value, filter_days = undefined) 
+    function __group_same_value(value, filterDays = undefined) 
     {
         // console.log(value);
-        const parsedData = parseToObject(value, filter_days);
+        const parsedData = parseToObject(value, filterDays);
         var ls = [];
 
         const ls_process = Object.keys(parsedData);

@@ -41,6 +41,12 @@
         font-size: 20px;
     }
 
+    #downloadAllCsv {
+        width: 200px;
+        transform: translateX(350px);
+        /* font-size: 20px; */
+    }
+
     @media (max-width: 768px) {
         .footerbar {
             margin: 0;
@@ -58,11 +64,90 @@
         <option value="Số lượng">SỐ LƯỢNG</option>
         <option value="Volume">VOLUME</option>
     </select>
+    <button id="downloadAllCsv" class="btn btn-primary">Download CSV</button>
     <button id="close-detail" class="btn btn-primary"><i class="fas fa-times"></i></button>
 </div>
 
 <script>
     document.getElementById('close-detail').addEventListener("click", () => {
         document.getElementById('detail-obj').classList.remove('active');
+    });
+
+    document.getElementById('downloadAllCsv').addEventListener('click', function () {
+        
+        const tables = document.querySelectorAll('table');
+        var index = 0;
+
+        tables.forEach(table=> {
+            index += 1;
+            const rows = document.querySelectorAll("tr");
+            // Lấy ID của bảng
+            const tableId = table.id || 'table';
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+
+            rows.forEach(row => {
+            // Lấy tất cả các cột (td) trong hàng
+
+                var cells = row.querySelectorAll("th");
+                var rowData = [];
+
+                cells.forEach(cell => {
+                    // Lấy nội dung trong mỗi ô, thay thế xuống dòng bằng dấu '-'
+                    var cellContent = cell.textContent;
+                    rowData.push(cellContent);
+                    
+                    if(cellContent.includes('-'))
+                    rowData.push(cellContent + '-Vol');
+                });
+
+                if(!row.innerHTML.includes('TỔNG CỘNG'))
+                {
+
+                    cells = row.querySelectorAll("td");
+                    
+                    cells.forEach(cell => {
+                        // Lấy nội dung trong mỗi ô, thay thế xuống dòng bằng dấu '-'
+                        var cellContent = '';
+                        var content = cell.innerHTML;
+                        
+                        if(content.includes('<i style="color:red" class="fa fa-check"></i>'))
+                            rowData.push('✔');
+                        else
+                        {
+                            cell.textContent.trim().split('\n').forEach(s => 
+                            {
+                                if(s.trim() != '' && s.trim() != '+') cellContent += s + '-';
+                            });
+
+                            
+                            ['PHÔI','TINH','NGUOI','HT','LAPRAP','NHAM','SON','UV','ĐBN','DONGGOI'].forEach(key =>
+                            {
+                                const regex = new RegExp(key, 'g');  // Tạo biểu thức chính quy để thay thế tất cả
+                                cellContent = cellContent.replace(regex, '-' + key);
+                            });
+
+                            rowData.push(cellContent.replace('-        ✔-','')
+                                .replace('                                    ','')
+                                .replace('---','')
+                                .replace(/"/g, ''));
+                        }
+                        
+                    });
+                }
+
+                // Ghép nội dung các cột thành một dòng CSV
+                csvContent += rowData.join(",") + "\n";
+            });
+
+            // Tạo file CSV để tải xuống
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `table_data_${tableId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
     });
 </script>

@@ -4,6 +4,13 @@ import re
 register = template.Library()
 
 @register.filter
+def mod(value, divisor):
+    try:
+        return value % divisor
+    except (TypeError, ValueError):
+        return None
+
+@register.filter
 def split(value, delimiter):
     """
     Tách chuỗi dựa trên ký tự delimiter.

@@ -13,7 +13,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myfactory.settings")
 django.setup()
 
-from appfactory.models import DetailItem, DateItem,ShipQtyByContainerRelation, ProductItem, DetailVolumeItem, ProductVolumeItem, DateCanEdit, ShipDetailItem, ShipInfor, ContInfor
+from appfactory.models import DetailItem, DateItem,ShipQtyByContainerRelation, ProductItem, \
+    DetailVolumeItem, ProductVolumeItem, DateCanEdit, ShipDetailItem, ContInfor
 
 _key_code_ = 'MÃ SP'
 _valid_letter_length_ = 5
@@ -307,38 +308,7 @@ def import_ship_data(clientname, file, headKeys, vertical_po_prefix = None):
                 except ContInfor.DoesNotExist:
                     print(f"No ContInfor found for letter: {poletter}")
 
-def _read_all_ship_excel():
-    ShipDetailItem.objects.all().delete()
-    ContInfor.objects.all().delete()
-    ShipQtyByContainerRelation.objects.all().delete()
 
-    import_ship_data('UMBRA', 'media/TH XUAT UMBRA 2023.xlsx',
-                     [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},], 'B')
-    
-    import_ship_data('MFC', 'media/TH XUAT MFC 2023.xlsx',
-                     [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},],)
-    
-    import_ship_data('ASL', 'media/TH XUAT ASHLEY 2023.xlsx', 
-                     [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},],'JK')
-    
-    import_ship_data('FWG', 'media/TH XUAT FWG 2023.xlsx', 
-                     [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},],'A')
-    
-    import_ship_data('AXC', 'media/TH XUAT AXCESS  2023- NEW 01-03-2023.xlsx', 
-                     [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},],'A')
-    
-    for itm in ContInfor.objects.all():
-        if itm.name and not itm.name.startswith('CONT'): 
-            itm.name = None
-            itm.save()
-            print(f"Set none for code: {itm.poNumber}")
-
-        if itm.poNumber and itm.poNumber.startswith('CONT'):
-            itm.name = itm.poNumber
-            itm.poNumber = None
-            itm.save()
-            print(f"Set none for cont: {itm.poNumber}")
-    
 def is_float(value):
     try:
         float(value)
@@ -347,8 +317,8 @@ def is_float(value):
         return False
 
 
-def _read_XNT_excel():
-    xls = VerticalExcelCLS('media/TP ( N-X-T ) THANG  12-2024.xls', 'NHAP LIEU')
+def _read_XNT_excel(file):
+    xls = VerticalExcelCLS(file, 'NHAP LIEU')
     xls.read_data([{'keywords':['MÃ TP', 'TÊN SẢN PHẨM'],'range':['A','Z']},])
     print(len(ShipDetailItem.objects.all()))
 
@@ -370,7 +340,7 @@ def _read_XNT_excel():
                 if created:
                     print(f"Not found for code: {code}")
 
-    xls = VerticalExcelCLS('media/TP ( N-X-T ) THANG  12-2024.xls', 'BAO CAO X-N-T')
+    xls = VerticalExcelCLS(file, 'BAO CAO X-N-T')
     xls.read_data([{'keywords':['MÃ TP', 'TÊN SẢN PHẨM'],'range':['A','Z']},])
 
     for line in xls.data:
@@ -393,12 +363,64 @@ def _read_XNT_excel():
                 if created:
                     print(f"Stock-Not found for code: {code}")
 
-if __name__ == "__main__":
-    _read_all_ship_excel()
-    _read_XNT_excel()
+def _read_all_ship_excel(filelist):
+    ShipDetailItem.objects.all().delete()
+    ContInfor.objects.all().delete()
+    ShipQtyByContainerRelation.objects.all().delete()
+
+    for file in filelist:
+        client = None
+        ch = None
+
+        if 'UMBRA' in file:
+            client = 'UMBRA'
+            ch = 'B'
+        elif 'MFC' in file:
+            client = 'MFC'
+            ch = ''
+        elif 'ASHLEY' in file:
+            client = 'ASL'
+            ch = 'JK'
+        elif 'FWG' in file:
+            client = 'FWG'
+            ch = 'A'
+        elif 'AXCESS' in file:
+            client = 'AXC'
+            ch = 'A'
+        
+        if client:
+            import_ship_data(client, file, [{'keywords':['CODE', 'ITEM', 'COLOR'],'range':['A','Z']},], ch)
+    
+    for file in filelist:
+        if '( N-X-T )' in file:
+            _read_XNT_excel(file)
 
     for itm in ContInfor.objects.all():
+        if itm.name and not itm.name.startswith('CONT'): 
+            itm.name = None
+            itm.save()
+            print(f"Set none for code: {itm.poNumber}")
+
+        if itm.poNumber and itm.poNumber.startswith('CONT'):
+            itm.name = itm.poNumber
+            itm.poNumber = None
+            itm.save()
+            print(f"Set none for cont: {itm.poNumber}")
+
         itm.updateData()
+
+if __name__ == "__main__":
+    _read_all_ship_excel([])
+    
+    # for itm in ContInfor.objects.all():
+    #     itm.updateData()
 
     # for itm in ShipDetailItem.objects.all():
     #     itm.Print()
+
+
+    # for itm in ContInfor.objects.all():
+    #     if len(itm.etd.all()) > 0:
+    #         print('etd', len(itm.etd.all()))
+
+    # ContInfor.sortData()

@@ -15,7 +15,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myfactory.settings")
 django.setup()
 
 from django.conf import settings
-from appfactory.models import get_details_date_qty, GlobalVars, DetailItem, ProductItem, DetailVolumeItem, ProductVolumeItem
+from appfactory.models import GlobalVars, DetailItem, ProductItem, DetailVolumeItem, ProductVolumeItem
 
 # SHEET_TYPE_SP = ['HT','ĐBN','ĐONGGOI','DBN','DONGGOI']
 SELECTED_SHEETS = ['KE HOACH','PHÔI','PHOI','TINH','NHAM','LAPRAP','NGUOI','SON','UV','ĐBN','DBN','HT','ĐONGGOI','DONGGOI']
@@ -119,53 +119,10 @@ def generate_product_fr_details():
 
     for product in ProductItem.objects.all():
         product.updateData()
-        print(product.code)
+        # print(product.code)
 
-# import sqlite3
-
-# def reset_and_add_details(details):
-#     # Giả sử 'details' là danh sách các đối tượng DetailItem, bạn sẽ lấy tất cả các 'id' từ các đối tượng này
-#     detail_ids_to_keep = set(detail.id for detail in details)  # Lấy 'id' từ các đối tượng DetailItem
-    
-#     # Lấy tất cả các đối tượng DetailItem hiện tại trong cơ sở dữ liệu
-#     current_detail_items = DetailItem.objects.all()
-
-#     # Xóa các DetailItem không có trong 'details'
-#     for item in current_detail_items:
-#         if item.id not in detail_ids_to_keep:
-#             item.delete()
-
-#     # Thêm lại các DetailItem từ 'details' vào cơ sở dữ liệu
-#     for detail in details:
-#         # Nếu DetailItem chưa có trong cơ sở dữ liệu, thêm mới
-#         if not DetailItem.objects.filter(id=detail.id).exists():
-#             DetailItem.objects.create(**detail)
-    
-#     print("DetailItems have been reset and added again, while keeping those in 'details'.")
-
-# def decrease_dblite(table_key, num_rows):
-#     products = ProductItem.objects.all()
-    
-#     count = 0
-#     res = set()
-
-#     for product in products:
-#         details = product.details.all()
-
-#         if len(details) > 0:
-#             res.update(details)
-#             count += 1
-
-#             if count > 10: break
-
-    
-#     reset_and_add_details(res)
-#     generate_product_fr_details()
-    
-
-    
-
-
+    GlobalVars.setAllTotals(ProductItem.objects.all(), True)
+   
 if __name__ == "__main__":
     # decrease_dblite('appfactory_detailitem', 250)
     # generate_product_fr_details()
@@ -179,16 +136,48 @@ if __name__ == "__main__":
 
     # generate_product_fr_details()
 
-    GlobalVars.objects.all().delete()
-    total_qty, total_vol, datelist = get_details_date_qty(ProductItem.objects.all())
 
-    globalvar = GlobalVars.objects.create(
-        total_qty = total_qty, 
-        total_vol = total_vol, 
-        datelist = datelist
-    )
+
+    # GlobalVars.objects.all().delete()
+    # total_qty, total_vol, datelist = get_details_date_qty(ProductItem.objects.all())
+
+    
+    # globalvar = GlobalVars.objects.create(
+    #     total_qty = total_qty, 
+    #     total_vol = total_vol, 
+    #     datelist = datelist
+    # )
+
+    # globalvar = GlobalVars.objects.all().first()
+    # print(globalvar.total_qty, globalvar.total_vol, globalvar.datelist)
 
     
 
 
+
     # print(settings.total_qty, settings.total_vol, settings.datelist)
+
+    # for product in ProductItem.objects.all():
+    #     # print(product.get_unique_days_and_months())
+    #     # print(product.get_summary_qty_by_(True))
+    #     print(product.code)
+    #     product.updateData()
+
+    # for product in ProductItem.objects.all():
+    #     # product.updateData()
+
+    #     for dt in product.details.all():
+    #         print('detail', list(dt.date.all()))
+
+    #     print('sum', len(product.details.all()), product.summary_qty_by_qty, 'sumvol', product.summary_qty_by_vol)
+
+
+
+    
+
+    GlobalVars.setAllTotals(ProductItem.objects.all(), True)
+    # print(GlobalVars.get_value("FILTER_PROCESS"))
+    # for detail in DetailItem.objects.all():
+    #     print(len(detail.date.all()))
+
+    # print(settings.ref_process_value)

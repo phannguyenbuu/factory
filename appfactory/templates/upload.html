@@ -22,8 +22,7 @@
         /* Tạo nút dấu + */
         .upload-container {
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            gap: 200px;
             align-items: center;
         }
         
@@ -39,6 +38,9 @@
             border-radius: 50%;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             cursor: pointer;
+            margin-left: 15vw;
+            margin-top: 5vh;
+            transform: translate(-50%,-50%);
         }
 
         .upload-button input[type="file"] {
@@ -49,11 +51,18 @@
             content: '+'; 
             text-align: center;
             font-size: 48px;
-            color: #4CAF50;
+            color: #006385;
+            top: -50%;
+            left: -50%;
+            transform: translate(0%, -10%); /* Căn giữa chính xác */
         }
 
         .upload-item {
-            display: flex;
+            width: 30vw;
+            height: 50vh;
+            border: 1px solid #006385;
+            border-radius: 20px;
+            align-items: center;
         }
 
         .file-name {
@@ -65,21 +74,26 @@
 
         /* Nút Process */
         .process-button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
+            padding: 10px;
+            margin-left: 13vw;
+            margin-top: 30vh;
+            background-color: #006385;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            
             display: none;
         }
 
         /* Progress bar */
         .progress-container {
-            width: 80vw;
-            margin-top: 20px;
-            display: none; /* Mặc định ẩn progress bar */
+            width: 20vw;
+            /* margin-top: 20vh; */
+            bottom: 10vh;
+            position: absolute;
+            /* display: none; */
         }
 
         .progress-bar {
@@ -95,34 +109,46 @@
         @keyframes progressAnimation {
             0% {
                 width: 0%;
+                opacity: 1;
             }
-            50% {
-                width: 100%;
+            95% {
+                opacity: 1;
             }
             100% {
-                width: 0%;
+                width: 100%;
+                opacity: 0;
             }
         }
     </style>
 </head>
 <body>
     <div class="upload-container">
-        {% for number in upload_numbers %}
-            <div class="upload-item">
-                <input type="file" id="fileInput{{ number }}" class="upload-button" accept=".xlsm,.xls,.xlsx,.csv" onchange="handleFileUpload(event, {{ number }})">
-                <div id="fileName{{ number }}" class="file-name"></div>
-            </div>
-        {% endfor %}
+        <div class="upload-item">
+            <p style="margin-left:13vw">PRODUCT</p>
+            <input type="file" id="fileInput" class="upload-button" accept=".xlsm,.xls,.xlsx,.csv" onchange="handleProductFileUpload(event)" multiple>
+            <div id="fileName-product" class="file-name"></div>
+            <button class="process-button" id="process-button-product" onclick="confirmAndProcess()">UPLOAD</button>
+        </div>
+
+        <div class="upload-item">
+            <p style="margin-left:14vw">N-X-T</p>
+            <input type="file" id="fileInput" class="upload-button" accept=".xlsm,.xls,.xlsx,.csv" onchange="handleXNTFileUpload(event)" multiple>
+            <div id="fileName-xnt" class="file-name"></div>
+            <button class="process-button" id="process-button-xnt" onclick="confirmAndProcess()">UPLOAD</button>
+        </div>
+
         
-        <button class="process-button" onclick="confirmAndProcess()">UPLOAD</button>
-        
-        <!-- Thêm progress bar -->
-        <div id="progressContainer" class="progress-container">
-            <div class="progress">
-                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
-            </div>
+    </div>
+
+   
+    
+    <!-- Thêm progress bar -->
+    <div id="progressContainer" class="progress-container">
+        <div class="progress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
         </div>
     </div>
+    
     
     <script>
         function getCSRFToken() {
@@ -135,13 +161,25 @@
             document.getElementById('fileInput' + number).click();
         }
 
-        function handleFileUpload(event, number) {
-            const file = event.target.files[0];
-            if (file) {
-                selectedFiles[number] = file;
-                document.getElementById('fileName' + number).textContent = file.name;
-                const processButton = document.querySelector('.process-button');
-                processButton.style.display = 'inline-block';
+        function handleProductFileUpload(event, number) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                selectedFiles = files; // Lưu các tệp vào mảng selectedFiles
+                const fileNames = Array.from(files).map(file => file.name).join('<br>'); // Lấy tên các tệp và nối chúng
+                document.getElementById('fileName-product').innerHTML = fileNames; // Hiển thị tên tệp
+                const processButton = document.querySelector('#process-button-product');
+                processButton.style.display = 'inline-block'; // Hiển thị nút xử lý
+            }
+        }
+
+        function handleXNTFileUpload(event, number) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                selectedFiles = files; // Lưu các tệp vào mảng selectedFiles
+                const fileNames = Array.from(files).map(file => file.name).join('<br>'); // Lấy tên các tệp và nối chúng
+                document.getElementById('fileName-xnt').innerHTML = fileNames; // Hiển thị tên tệp
+                const processButton = document.querySelector('#process-button-xnt');
+                processButton.style.display = 'inline-block'; // Hiển thị nút xử lý
             }
         }
 
@@ -155,10 +193,11 @@
             }
         }
 
-        function processFiles() {
+        function processFiles(file_input_type) {
             const formData = new FormData();
-            
-            selectedFiles.forEach((file, index) => {
+
+            console.log('Files', Array.from(selectedFiles).length);
+            Array.from(selectedFiles).forEach((file, index) => {
                 if (file) {
                     formData.append('file' + index, file);
                 }

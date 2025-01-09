@@ -37,13 +37,13 @@
                         <th>SỐ PO</th>
                         <th>SỐ CONT</th>
                         
-                        <th>SỐ LOẠI CT</th>
-                        <th>SLG SP</th>
-                        <th>TỒN KHO</th>
+                        <th>ĐÃ SHIP</th>
                         
-                        <th>ETD</th>
+                        
                         <th>PSI</th>
                         <th>CYCUT</th>
+                        <th>ETD</th>
+
                         <th>SICUT</th>
                         <th>SHIP</th>
                     </tr>
@@ -59,7 +59,9 @@
                                 </p>
                             </td>
                             <td>{{ itm.name|default:"--" }}</td>
-                            <td>{{ itm.details.all|length }}</td>
+
+
+                            <!-- <td>{{ itm.details.all|length }}</td>
                             <td>{{ itm.qty }}</td>
                             <td>
                                 {{ itm.instock }}
@@ -67,11 +69,18 @@
                                     {{ itm.instockVolume|floatformat:6 }} m3
                                 </p>
                                 
+                            </td> -->
+                            <td>
+                                {% if itm.is_ship %}
+                                    <i style="color:red" class="fa fa-check"></i>
+                                {% endif %}
                             </td>
                             
-                            {% include 'modules/can_edit_date.html' with field='etd' objects=itm.etd.all %}
+                            
                             {% include 'modules/can_edit_date.html' with field='psi' objects=itm.psi.all %}
                             {% include 'modules/can_edit_date.html' with field='cyCut' objects=itm.cyCut.all %}
+                            {% include 'modules/can_edit_date.html' with field='etd' objects=itm.etd.all %}
+                            
                             {% include 'modules/can_edit_date.html' with field='siCut' objects=itm.siCut.all %}
                             {% include 'modules/can_edit_date.html' with field='shipRun' objects=itm.shipRun.all %}
                         </tr>

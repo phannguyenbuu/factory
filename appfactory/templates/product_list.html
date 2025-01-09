@@ -44,15 +44,15 @@
         } 
         
         th:nth-child(4), td:nth-child(4),th:nth-child(5), td:nth-child(5) {
-            width: 50px; /* Đặt độ rộng cho cột thứ hai */
+            width: 100px; /* Đặt độ rộng cho cột thứ hai */
             text-align: center;
         }
 
         .small-title-table-content {
-            color:#fff;
+            color:#000;
             font-size: 12px;
             font-style: italic;
-            
+            background-color: #ffa200;
             text-align: center;
         }
     </style>
@@ -75,11 +75,11 @@
                         <th id="head-volume">Volume</th>
                         
                         {% for itm in FilterDay %}
-                            <th class="counter" id = '{{ itm.label }}'>{{ itm.label }}</th>
+                            <th class="counter" id = '{{ itm }}'>{{ itm }}</th>
                         {% endfor %}
                         
                         {% for itm in FilterDay %}
-                            <th class="volume" id = '{{ itm.label }}-vol'>{{ itm.label }}</th>
+                            <th class="volume" id = '{{ itm }}-vol'>{{ itm }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -103,7 +103,7 @@
                                 <p>{{ product.name }}</p>
 
                                 {% for item in select_lists.PO %}
-                                    {% if item.label == product.po %}
+                                    {% if item == product.po %}
                                         <p class="po-note small-title-table-content" style = 'background-color:  {{ item.color }};'>{{ product.get_po|replace:'Kế hoạch Tháng,' }}</p>
                                     {% endif %}
                                 {% endfor %}
@@ -117,8 +117,8 @@
                             </td>
                             
                             {% for day in FilterDay %}
-                                {% include 'modules/table_date_column.html' with type='counter' datalist=product.get_summary_qty_by_process %}
-                                {% include 'modules/table_date_column.html' with type='volume' datalist=product.get_summary_volume_by_process %}
+                                {% include 'modules/table_date_column.html' with type='counter' datalist=product.summary_qty_by_qty %}
+                                {% include 'modules/table_date_column.html' with type='volume' datalist=product.summary_qty_by_vol %}
                             {% endfor %}
                         </tr>
                     {% empty %}
